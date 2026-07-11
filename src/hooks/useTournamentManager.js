@@ -1,0 +1,136 @@
+import { useEffect, useMemo, useState } from 'react'
+import { GROUP_MATCHES } from '../constants/tournament'
+import { readTournamentState, saveTournamentState } from '../storage/tournamentStorage'
+import {
+  calculateStandings,
+  createGroupResults,
+  createTournamentState,
+  getWinnerId,
+  isResultComplete,
+  normalizeScore,
+} from '../utils/tournament'
+
+export function useTournamentManager() {
+  const [tournament, setTournament] = useState(readTournamentState)
+  const [showOutput, setShowOutput] = useState(false)
+
+  const { teams, groupResults, knockout } = tournament
+  const rosterComplete = teams.every((team) => team.name.trim())
+  const teamsById = useMemo(() => Object.fromEntries(teams.map((team) => [team.id, team])), [teams])
+  const standings = useMemo(() => calculateStandings(teams, groupResults), [teams, groupResults])
+  const groupComplete =
+    rosterComplete && GROUP_MATCHES.every((match) => isResultComplete(groupResults[match.id]))
+
+  const firstSeed = groupComplete ? standings[0] : null
+  const secondSeed = groupComplete ? standings[1] : null
+  const thirdSeed = groupComplete ? standings[2] : null
+  const semiTeams = groupComplete ? [secondSeed, thirdSeed] : []
+  const semiWinnerId = getWinnerId(knockout.semi, semiTeams)
+  const semiWinner = teamsById[semiWinnerId] || null
+  const finalTeams = groupComplete && semiWinner ? [firstSeed, semiWinner] : []
+  const championId = getWinnerId(knockout.final, finalTeams)
+  const champion = teamsById[championId] || null
+
+  useEffect(() => {
+    saveTournamentState(tournament)
+  }, [tournament])
+
+  const updateTeam = (teamId, field, value) => {
+    setTournament((current) => ({
+      ...current,
+      teams: current.teams.map((team) => (team.id === teamId ? { ...team, [field]: value } : team)),
+    }))
+  }
+
+  const uploadIcon = (teamId, event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = () => updateTeam(teamId, 'icon', String(reader.result || ''))
+    reader.readAsDataURL(file)
+    event.target.value = ''
+  }
+
+  const clearIcon = (teamId) => updateTeam(teamId, 'icon', '')
+
+  const updateGroupResult = (matchId, field, value) => {
+    setTournament((current) => ({
+      ...current,
+      groupResults: {
+        ...current.groupResults,
+        [matchId]: {
+          ...current.groupResults[matchId],
+          [field]: normalizeScore(value),
+        },
+      },
+    }))
+  }
+
+  const updateKnockout = (stage, field, value) => {
+    setTournament((current) => ({
+      ...current,
+      knockout: {
+        ...current.knockout,
+        [stage]: {
+          ...current.knockout[stage],
+          [field]: field === 'winnerId' ? value : normalizeScore(value),
+        },
+      },
+    }))
+  }
+
+  const resetScores = () => {
+    setTournament((current) => ({
+      ...current,
+      groupResults: createGroupResults(),
+      knockout: createTournamentState().knockout,
+    }))
+  }
+
+  const startNextTournament = () => {
+    if (!champion) return
+
+    setTournament((current) => ({
+      ...current,
+      teams: current.teams.map((team) =>
+        team.id === champion.id ? { ...team, stars: Number(team.stars || 0) + 1 } : team,
+      ),
+      groupResults: createGroupResults(),
+      knockout: createTournamentState().knockout,
+    }))
+    setShowOutput(false)
+  }
+
+  const resetAll = () => {
+    if (!window.confirm('Reset teams and tournament data?')) return
+    setTournament(createTournamentState())
+    setShowOutput(false)
+  }
+
+  return {
+    champion,
+    clearIcon,
+    finalResult: knockout.final,
+    firstSeed,
+    groupComplete,
+    groupResults,
+    resetAll,
+    resetScores,
+    rosterComplete,
+    secondSeed,
+    semiResult: knockout.semi,
+    semiWinner,
+    setShowOutput,
+    showOutput,
+    startNextTournament,
+    standings,
+    teams,
+    teamsById,
+    thirdSeed,
+    updateGroupResult,
+    updateKnockout,
+    updateTeam,
+    uploadIcon,
+  }
+}
