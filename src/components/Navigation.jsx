@@ -1,8 +1,9 @@
-import { BookOpenText, Crown, Trophy } from 'lucide-react'
+import { BookOpenText, Radio, ShieldCheck, Trophy } from 'lucide-react'
 
 const navItems = [
-  { icon: Crown, label: 'League', to: '/' },
+  { icon: Radio, label: 'Live League', to: '/' },
   { icon: BookOpenText, label: 'Rules', to: '/rules' },
+  { icon: ShieldCheck, label: 'Admin', to: '/admin' },
   { icon: Trophy, label: '6 Player Cup', to: '/world-cup' },
 ]
 

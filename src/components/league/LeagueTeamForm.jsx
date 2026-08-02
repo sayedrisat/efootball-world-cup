@@ -2,26 +2,49 @@ import { ImagePlus, Plus, Upload } from 'lucide-react'
 import { useState } from 'react'
 
 function LeagueTeamForm({ onAddTeam }) {
+  const [error, setError] = useState('')
+  const [file, setFile] = useState(null)
   const [image, setImage] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [name, setName] = useState('')
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
 
     if (!name.trim()) return
 
-    onAddTeam({ image, name })
-    setImage('')
-    setName('')
+    setError('')
+    setIsSubmitting(true)
+
+    try {
+      await onAddTeam({ file, image, name })
+      setFile(null)
+      setImage('')
+      setName('')
+    } catch (submitError) {
+      setError(submitError.message || 'Could not add this team.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleUpload = (event) => {
-    const file = event.target.files?.[0]
-    if (!file) return
+    const selectedFile = event.target.files?.[0]
+    if (!selectedFile) return
 
-    const reader = new FileReader()
-    reader.onload = () => setImage(String(reader.result || ''))
-    reader.readAsDataURL(file)
+    if (!selectedFile.type.startsWith('image/')) {
+      setError('Please select an image file.')
+      return
+    }
+
+    if (selectedFile.size > 5 * 1024 * 1024) {
+      setError('Team image must be 5 MB or smaller.')
+      return
+    }
+
+    setError('')
+    setFile(selectedFile)
+    setImage('')
     event.target.value = ''
   }
 
@@ -50,11 +73,17 @@ function LeagueTeamForm({ onAddTeam }) {
           Image URL
           <input
             type="url"
-            value={image.startsWith('data:') ? '' : image}
+            value={image}
             placeholder="https://..."
-            onChange={(event) => setImage(event.target.value)}
+            onChange={(event) => {
+              setFile(null)
+              setImage(event.target.value)
+            }}
           />
         </label>
+
+        {file && <span className="league-selected-file">{file.name}</span>}
+        {error && <span className="admin-form-error">{error}</span>}
 
         <div className="league-add-actions">
           <label className="league-upload-button">
@@ -63,9 +92,9 @@ function LeagueTeamForm({ onAddTeam }) {
             <input type="file" accept="image/*" onChange={handleUpload} />
           </label>
 
-          <button className="league-primary-action" type="submit">
+          <button className="league-primary-action" disabled={isSubmitting} type="submit">
             <Plus size={17} />
-            Add Team
+            {isSubmitting ? 'Adding Team' : 'Add Team'}
           </button>
         </div>
       </form>

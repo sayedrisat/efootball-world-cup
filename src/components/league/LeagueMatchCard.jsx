@@ -9,7 +9,7 @@ function getResultLabel(matchState, homeTeam, awayTeam) {
   return `${displayTeamName(awayTeam)} wins`
 }
 
-function LeagueMatchCard({ awayTeam, fixture, homeTeam, onResultChange, result, results }) {
+function LeagueMatchCard({ awayTeam, fixture, homeTeam, onResultChange, readOnly, result, results }) {
   const savedResult = result || emptyResult
   const matchState = getMatchState(fixture, results)
 
@@ -33,29 +33,37 @@ function LeagueMatchCard({ awayTeam, fixture, homeTeam, onResultChange, result, 
           <strong>{displayTeamName(homeTeam)}</strong>
         </div>
 
-        <div className="league-score-box">
-          <input
-            aria-label={`${displayTeamName(homeTeam)} score`}
-            inputMode="numeric"
-            max="99"
-            min="0"
-            onChange={(event) => onResultChange(fixture.id, 'homeScore', event.target.value)}
-            placeholder="0"
-            type="number"
-            value={savedResult.homeScore}
-          />
-          <span>:</span>
-          <input
-            aria-label={`${displayTeamName(awayTeam)} score`}
-            inputMode="numeric"
-            max="99"
-            min="0"
-            onChange={(event) => onResultChange(fixture.id, 'awayScore', event.target.value)}
-            placeholder="0"
-            type="number"
-            value={savedResult.awayScore}
-          />
-        </div>
+        {readOnly ? (
+          <div className="league-score-box league-score-box--display" aria-label="Match score">
+            <strong>{savedResult.homeScore === '' ? '-' : savedResult.homeScore}</strong>
+            <span>:</span>
+            <strong>{savedResult.awayScore === '' ? '-' : savedResult.awayScore}</strong>
+          </div>
+        ) : (
+          <div className="league-score-box">
+            <input
+              aria-label={`${displayTeamName(homeTeam)} score`}
+              inputMode="numeric"
+              max="99"
+              min="0"
+              onChange={(event) => onResultChange(fixture.id, 'homeScore', event.target.value)}
+              placeholder="0"
+              type="number"
+              value={savedResult.homeScore}
+            />
+            <span>:</span>
+            <input
+              aria-label={`${displayTeamName(awayTeam)} score`}
+              inputMode="numeric"
+              max="99"
+              min="0"
+              onChange={(event) => onResultChange(fixture.id, 'awayScore', event.target.value)}
+              placeholder="0"
+              type="number"
+              value={savedResult.awayScore}
+            />
+          </div>
+        )}
 
         <div className={`league-match-side${matchState === 'away' ? ' league-match-side--winner' : ''}`}>
           <LeagueTeamAvatar team={awayTeam} />
@@ -64,7 +72,15 @@ function LeagueMatchCard({ awayTeam, fixture, homeTeam, onResultChange, result, 
       </div>
 
       <div className="league-match-footer">
-        <span>{matchState === 'pending' ? 'Result not saved yet' : 'Result saved in browser'}</span>
+        <span>
+          {matchState === 'pending'
+            ? readOnly
+              ? 'Awaiting result'
+              : 'Result not saved yet'
+            : readOnly
+              ? 'Official result'
+              : 'Result ready to publish'}
+        </span>
         {matchState !== 'pending' && (
           <span className="league-result-pill">
             <Trophy size={14} />

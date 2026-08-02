@@ -3,7 +3,7 @@ import { TROPHY_SRC } from '../../constants/tournament'
 import LeagueTeamAvatar from './LeagueTeamAvatar'
 import { displayTeamName } from '../../utils/league/leagueRules'
 
-function LeagueChampionPanel({ champion, completedMatches, pendingMatches, table, tournamentComplete }) {
+function LeagueChampionPanel({ champion, completedMatches, isAdmin = false, pendingMatches, table, tournamentComplete }) {
   const leader = table[0]
 
   return (
@@ -17,7 +17,11 @@ function LeagueChampionPanel({ champion, completedMatches, pendingMatches, table
         <p>
           {tournamentComplete
             ? `${displayTeamName(champion)} finished top of the live table and wins the league title.`
-            : 'Add unlimited teams, play home-away fixtures, save scores, and let the table decide the champion.'}
+            : isAdmin
+              ? 'Add unlimited teams, play home-away fixtures, save scores, and let the table decide the champion.'
+              : leader
+                ? 'Follow every home-away result and the live championship standings.'
+                : 'Official fixtures, results, table, and champion updates will appear here.'}
         </p>
 
         <div className="league-progress-line">

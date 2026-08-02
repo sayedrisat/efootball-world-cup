@@ -149,9 +149,86 @@ select:disabled {
 }
 
 .league-page,
-.rules-page {
+.rules-page,
+.admin-page {
   display: grid;
   gap: 18px;
+}
+
+.league-live-bar,
+.admin-control-header,
+.league-sync-status {
+  display: flex;
+  align-items: center;
+}
+
+.league-live-bar {
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 7px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(8, 12, 16, 0.66);
+}
+
+.league-live-bar > span:last-child {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.league-sync-status {
+  gap: 7px;
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid rgba(85, 211, 154, 0.28);
+  border-radius: 999px;
+  color: #baf4d6;
+  background: rgba(85, 211, 154, 0.1);
+  font-size: 0.7rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.league-sync-status--loading,
+.league-sync-status--saving {
+  color: #fff0be;
+  border-color: rgba(244, 193, 93, 0.32);
+  background: rgba(244, 193, 93, 0.1);
+}
+
+.league-sync-status--local {
+  color: #d7dde0;
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.league-sync-status--error {
+  color: #ffd0ca;
+  border-color: rgba(239, 112, 101, 0.34);
+  background: rgba(239, 112, 101, 0.11);
+}
+
+.league-sync-error,
+.league-local-notice {
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.league-sync-error {
+  color: #ffd4ce;
+  border: 1px solid rgba(239, 112, 101, 0.38);
+  background: rgba(239, 112, 101, 0.12);
+}
+
+.league-local-notice {
+  color: #fff0be;
+  border: 1px solid rgba(244, 193, 93, 0.34);
+  background: rgba(244, 193, 93, 0.1);
 }
 
 .league-champion-panel {
@@ -331,6 +408,10 @@ select:disabled {
   align-items: start;
 }
 
+.league-public-layout {
+  min-width: 0;
+}
+
 .league-side,
 .league-main-stack {
   display: grid;
@@ -378,6 +459,15 @@ select:disabled {
   display: grid;
   gap: 12px;
   padding: 16px;
+}
+
+.league-selected-file {
+  overflow: hidden;
+  color: #baf4d6;
+  font-size: 0.72rem;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .league-add-actions {
@@ -750,6 +840,122 @@ select:disabled {
   color: var(--muted);
   font-weight: 1000;
   text-align: center;
+}
+
+.league-score-box--display strong {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  min-height: 50px;
+  border: 1px solid rgba(244, 193, 93, 0.26);
+  border-radius: 8px;
+  color: #ffffff;
+  background: rgba(4, 7, 10, 0.72);
+  font-size: 1.28rem;
+  font-weight: 1000;
+}
+
+.admin-control-header {
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 82px;
+  padding: 16px 18px;
+}
+
+.admin-control-header > div:first-child {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.admin-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 9px;
+}
+
+.admin-header-actions .league-primary-action,
+.admin-header-actions .league-reset-button {
+  padding: 0 13px;
+}
+
+.admin-control-header > div:first-child > strong {
+  overflow: hidden;
+  color: #fff9e9;
+  font-size: 0.84rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-login-panel,
+.admin-loading-panel {
+  width: min(520px, 100%);
+  margin: 70px auto 0;
+  padding: 26px;
+}
+
+.admin-login-panel {
+  display: grid;
+  gap: 22px;
+}
+
+.admin-login-panel > div:nth-child(2) {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-login-panel h1 {
+  font-size: clamp(2rem, 7vw, 3.2rem);
+}
+
+.admin-login-panel p {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 750;
+}
+
+.admin-login-mark {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border: 1px solid rgba(244, 193, 93, 0.42);
+  border-radius: 8px;
+  color: #171008;
+  background: linear-gradient(180deg, #ffe9a8, #e0a13a);
+}
+
+.admin-login-form {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-form-error {
+  margin: 0;
+  color: #ffbbb3;
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.admin-loading-panel {
+  display: grid;
+  place-items: center;
+  gap: 12px;
+  min-height: 220px;
+  color: var(--gold);
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.spin {
+  animation: league-spin 0.9s linear infinite;
+}
+
+@keyframes league-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .league-result-pill {
@@ -1733,9 +1939,30 @@ select {
 
   .league-board-toolbar,
   .league-match-topline,
-  .league-match-footer {
+  .league-match-footer,
+  .league-live-bar,
+  .admin-control-header {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .league-live-bar > span:last-child {
+    padding-inline: 4px;
+  }
+
+  .league-sync-status {
+    justify-content: center;
+  }
+
+  .admin-header-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .admin-login-panel,
+  .admin-loading-panel {
+    margin-top: 28px;
+    padding: 18px;
   }
 
   .league-filter-tabs {

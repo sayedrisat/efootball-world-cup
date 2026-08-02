@@ -4,16 +4,24 @@ import LeagueStatStrip from '../components/league/LeagueStatStrip'
 import LeagueTable from '../components/league/LeagueTable'
 import LeagueTeamForm from '../components/league/LeagueTeamForm'
 import LeagueTeamRoster from '../components/league/LeagueTeamRoster'
-import { useLeagueTournament } from '../hooks/league/useLeagueTournament'
+import LeagueSyncStatus from '../components/league/LeagueSyncStatus'
 
-function LeagueTournamentPage() {
-  const tournament = useLeagueTournament()
-
+function LeagueTournamentPage({ editable = false, tournament }) {
   return (
     <div className="league-page">
+      <div className="league-live-bar">
+        <LeagueSyncStatus status={tournament.remoteStatus} />
+        {tournament.lastUpdated && (
+          <span>Updated {new Date(tournament.lastUpdated).toLocaleString()}</span>
+        )}
+      </div>
+
+      {tournament.syncError && <div className="league-sync-error">{tournament.syncError}</div>}
+
       <LeagueChampionPanel
         champion={tournament.champion}
         completedMatches={tournament.completedMatches}
+        isAdmin={editable}
         pendingMatches={tournament.pendingMatches}
         table={tournament.table}
         tournamentComplete={tournament.tournamentComplete}
@@ -26,14 +34,16 @@ function LeagueTournamentPage() {
         totalMatches={tournament.fixtures.length}
       />
 
-      <div className="league-layout">
-        <aside className="league-side">
-          <LeagueTeamForm onAddTeam={tournament.addTeam} />
-          <LeagueTeamRoster onRemoveTeam={tournament.removeTeam} teams={tournament.teams} />
-          <button className="league-reset-all-button" onClick={tournament.resetAll} type="button">
-            Reset Full League
-          </button>
-        </aside>
+      <div className={editable ? 'league-layout' : 'league-public-layout'}>
+        {editable && (
+          <aside className="league-side">
+            <LeagueTeamForm onAddTeam={tournament.addTeam} />
+            <LeagueTeamRoster onRemoveTeam={tournament.removeTeam} teams={tournament.teams} />
+            <button className="league-reset-all-button" onClick={tournament.resetAll} type="button">
+              Reset Full League
+            </button>
+          </aside>
+        )}
 
         <div className="league-main-stack">
           <LeagueTable table={tournament.table} tournamentComplete={tournament.tournamentComplete} />
@@ -43,6 +53,7 @@ function LeagueTournamentPage() {
             matchFilter={tournament.matchFilter}
             onResetResults={tournament.resetResults}
             onResultChange={tournament.updateResult}
+            readOnly={!editable}
             results={tournament.results}
             setMatchFilter={tournament.setMatchFilter}
             teams={tournament.teams}

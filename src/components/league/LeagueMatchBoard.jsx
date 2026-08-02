@@ -13,6 +13,7 @@ function LeagueMatchBoard({
   matchFilter,
   onResetResults,
   onResultChange,
+  readOnly = false,
   results,
   setMatchFilter,
   teams,
@@ -25,7 +26,7 @@ function LeagueMatchBoard({
       <div className="league-section-title">
         <div>
           <span>Home & Away</span>
-          <h2>Match Center</h2>
+          <h2>{readOnly ? 'Live Results' : 'Match Center'}</h2>
         </div>
         <Swords size={22} />
       </div>
@@ -44,10 +45,12 @@ function LeagueMatchBoard({
           ))}
         </div>
 
-        <button className="league-reset-button" disabled={fixtures.length === 0} onClick={onResetResults} type="button">
-          <RotateCcw size={16} />
-          Reset Results
-        </button>
+        {!readOnly && (
+          <button className="league-reset-button" disabled={fixtures.length === 0} onClick={onResetResults} type="button">
+            <RotateCcw size={16} />
+            Reset Results
+          </button>
+        )}
       </div>
 
       {!tournamentReady ? (
@@ -69,6 +72,7 @@ function LeagueMatchBoard({
               homeTeam={teamsById[fixture.homeId]}
               key={fixture.id}
               onResultChange={onResultChange}
+              readOnly={readOnly}
               result={results[fixture.id]}
               results={results}
             />
