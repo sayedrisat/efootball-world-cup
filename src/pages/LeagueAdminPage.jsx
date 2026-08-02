@@ -1,11 +1,9 @@
 import { LoaderCircle, LogOut, ShieldCheck, UploadCloud } from 'lucide-react'
 import AdminLoginPanel from '../components/league/AdminLoginPanel'
 import { useLeagueTournament } from '../hooks/league/useLeagueTournament'
-import { useSupabaseAuth } from '../hooks/useSupabaseAuth'
 import LeagueTournamentPage from './LeagueTournamentPage'
 
-function LeagueAdminPage() {
-  const auth = useSupabaseAuth()
+function LeagueAdminPage({ auth }) {
   const tournament = useLeagueTournament({
     canEdit: !auth.isConfigured || Boolean(auth.session),
     userId: auth.session?.user?.id || null,
@@ -21,7 +19,7 @@ function LeagueAdminPage() {
   }
 
   if (auth.isConfigured && !auth.session) {
-    return <AdminLoginPanel onSignIn={auth.signIn} />
+    return <AdminLoginPanel onResetPassword={auth.sendPasswordReset} onSignIn={auth.signIn} />
   }
 
   return (

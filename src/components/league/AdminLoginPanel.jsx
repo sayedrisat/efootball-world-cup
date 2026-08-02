@@ -1,11 +1,12 @@
 import { KeyRound, LoaderCircle, LockKeyhole } from 'lucide-react'
 import { useState } from 'react'
 
-function AdminLoginPanel({ onSignIn }) {
+function AdminLoginPanel({ onResetPassword, onSignIn }) {
   const [email, setEmail] = useState('')
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [password, setPassword] = useState('')
+  const [resetMessage, setResetMessage] = useState('')
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -17,6 +18,26 @@ function AdminLoginPanel({ onSignIn }) {
       setPassword('')
     } catch (signInError) {
       setError(signInError.message || 'Could not sign in.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handlePasswordReset = async () => {
+    if (!email.trim()) {
+      setError('Enter your admin email first.')
+      return
+    }
+
+    setError('')
+    setResetMessage('')
+    setIsSubmitting(true)
+
+    try {
+      await onResetPassword(email.trim())
+      setResetMessage('Password reset link sent. Check your email inbox.')
+    } catch (resetError) {
+      setError(resetError.message || 'Could not send the reset email.')
     } finally {
       setIsSubmitting(false)
     }
@@ -55,9 +76,18 @@ function AdminLoginPanel({ onSignIn }) {
           />
         </label>
         {error && <p className="admin-form-error">{error}</p>}
+        {resetMessage && <p className="admin-form-success">{resetMessage}</p>}
         <button className="league-primary-action" disabled={isSubmitting} type="submit">
           {isSubmitting ? <LoaderCircle className="spin" size={17} /> : <KeyRound size={17} />}
           {isSubmitting ? 'Signing In' : 'Sign In'}
+        </button>
+        <button
+          className="admin-forgot-button"
+          disabled={isSubmitting}
+          onClick={handlePasswordReset}
+          type="button"
+        >
+          Forgot password?
         </button>
       </form>
     </section>
