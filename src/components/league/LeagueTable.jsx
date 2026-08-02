@@ -1,0 +1,77 @@
+import { BarChart3, Crown } from 'lucide-react'
+import LeagueTeamAvatar from './LeagueTeamAvatar'
+import { displayTeamName } from '../../utils/league/leagueRules'
+
+function formatGoalDifference(value) {
+  if (value > 0) return `+${value}`
+  return String(value)
+}
+
+function LeagueTable({ table, tournamentComplete }) {
+  return (
+    <section className="league-card league-table-card">
+      <div className="league-section-title">
+        <div>
+          <span>Live Ranking</span>
+          <h2>League Table</h2>
+        </div>
+        <BarChart3 size={22} />
+      </div>
+
+      <div className="league-table-scroll">
+        <div className="league-table">
+          <div className="league-table-row league-table-row--head">
+            <span>#</span>
+            <span>Team</span>
+            <span>P</span>
+            <span>H</span>
+            <span>A</span>
+            <span>W</span>
+            <span>D</span>
+            <span>L</span>
+            <span>GF</span>
+            <span>GA</span>
+            <span>+Goal</span>
+            <span>PTS</span>
+          </div>
+
+          {table.length === 0 ? (
+            <div className="league-table-empty">Add two or more teams to start the table.</div>
+          ) : (
+            table.map((team) => (
+              <div
+                className={`league-table-row${
+                  tournamentComplete && team.rank === 1 ? ' league-table-row--champion' : ''
+                }`}
+                key={team.id}
+              >
+                <span className="league-rank-cell">
+                  {team.rank}
+                  {tournamentComplete && team.rank === 1 && <Crown size={15} />}
+                </span>
+                <span className="league-table-team">
+                  <LeagueTeamAvatar size="sm" team={team} />
+                  <strong>{displayTeamName(team)}</strong>
+                </span>
+                <span>{team.played}</span>
+                <span>{team.homePlayed}</span>
+                <span>{team.awayPlayed}</span>
+                <span>{team.wins}</span>
+                <span>{team.draws}</span>
+                <span>{team.losses}</span>
+                <span>{team.goalsFor}</span>
+                <span>{team.goalsAgainst}</span>
+                <span className={team.goalDifference >= 0 ? 'league-positive' : 'league-negative'}>
+                  {formatGoalDifference(team.goalDifference)}
+                </span>
+                <span className="league-points-cell">{team.points}</span>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+export default LeagueTable
