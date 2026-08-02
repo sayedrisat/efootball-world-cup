@@ -1,4 +1,5 @@
 import { Trash2, UsersRound } from 'lucide-react'
+import TeamStars from '../TeamStars'
 import LeagueTeamAvatar from './LeagueTeamAvatar'
 import { displayTeamName } from '../../utils/league/leagueRules'
 
@@ -25,7 +26,10 @@ function LeagueTeamRoster({ onRemoveTeam, teams }) {
               <span className="league-team-seed">{String(index + 1).padStart(2, '0')}</span>
               <LeagueTeamAvatar team={team} />
               <div>
-                <strong>{displayTeamName(team)}</strong>
+                <span className="league-roster-name">
+                  <strong>{displayTeamName(team)}</strong>
+                  <TeamStars team={team} />
+                </span>
                 <span>Home + Away ready</span>
               </div>
               <button

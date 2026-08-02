@@ -20,7 +20,15 @@ export function createTeam({ name, image }) {
     id,
     image: image.trim(),
     name: name.trim(),
+    stars: 0,
   }
+}
+
+export function createNextTournamentTeams(teams, championId) {
+  return teams.map((team) => ({
+    ...team,
+    stars: team.id === championId ? Number(team.stars || 0) + 1 : Number(team.stars || 0),
+  }))
 }
 
 export function displayTeamName(team) {

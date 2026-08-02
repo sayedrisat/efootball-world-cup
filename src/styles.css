@@ -284,6 +284,29 @@ select:disabled {
   max-width: 920px;
 }
 
+.league-champion-name,
+.league-table-name,
+.league-roster-name {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.league-champion-name {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.league-table-name,
+.league-roster-name {
+  gap: 7px;
+}
+
+.league-table-name strong,
+.league-roster-name strong {
+  min-width: 0;
+}
+
 .league-champion-copy p,
 .rules-hero p,
 .rule-card p,
@@ -320,6 +343,24 @@ select:disabled {
 .league-progress-line strong {
   color: #171008;
   background: linear-gradient(180deg, #ffdf84, #d5972d);
+}
+
+.league-next-tournament-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 13px;
+  border: 1px solid rgba(85, 211, 154, 0.44);
+  border-radius: 8px;
+  color: #0a2419;
+  background: linear-gradient(180deg, #8cf0bf, #55c890);
+  box-shadow: 0 12px 28px rgba(85, 211, 154, 0.18);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 950;
+  text-transform: uppercase;
 }
 
 .league-leader-chip {
@@ -1909,6 +1950,10 @@ select {
   .rules-hero h1 {
     font-size: clamp(1.9rem, 10vw, 2.55rem);
     line-height: 1;
+  }
+
+  .league-next-tournament-button {
+    width: 100%;
   }
 
   .league-trophy-frame {

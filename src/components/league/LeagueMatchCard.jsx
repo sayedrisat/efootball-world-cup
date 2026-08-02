@@ -1,4 +1,5 @@
 import { Home, Plane, Trophy } from 'lucide-react'
+import TeamStars from '../TeamStars'
 import LeagueTeamAvatar from './LeagueTeamAvatar'
 import { displayTeamName, emptyResult, getMatchState } from '../../utils/league/leagueRules'
 
@@ -31,6 +32,7 @@ function LeagueMatchCard({ awayTeam, fixture, homeTeam, onResultChange, readOnly
         <div className={`league-match-side${matchState === 'home' ? ' league-match-side--winner' : ''}`}>
           <LeagueTeamAvatar team={homeTeam} />
           <strong>{displayTeamName(homeTeam)}</strong>
+          <TeamStars team={homeTeam} />
         </div>
 
         {readOnly ? (
@@ -68,6 +70,7 @@ function LeagueMatchCard({ awayTeam, fixture, homeTeam, onResultChange, readOnly
         <div className={`league-match-side${matchState === 'away' ? ' league-match-side--winner' : ''}`}>
           <LeagueTeamAvatar team={awayTeam} />
           <strong>{displayTeamName(awayTeam)}</strong>
+          <TeamStars team={awayTeam} />
         </div>
       </div>
 

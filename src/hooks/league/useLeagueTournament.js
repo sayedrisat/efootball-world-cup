@@ -11,6 +11,7 @@ import { readLeagueState, saveLeagueState } from '../../storage/league/leagueSto
 import {
   calculateLeagueTable,
   createLeagueState,
+  createNextTournamentTeams,
   createTeam,
   emptyResult,
   filterResultsByTeam,
@@ -63,6 +64,14 @@ function leagueReducer(state, action) {
     return {
       ...state,
       results: {},
+    }
+  }
+
+  if (action.type === 'NEXT_TOURNAMENT') {
+    return {
+      ...state,
+      results: {},
+      teams: createNextTournamentTeams(state.teams, action.payload.championId),
     }
   }
 
@@ -257,6 +266,13 @@ export function useLeagueTournament({ canEdit = true, userId = null } = {}) {
     if (!canEdit) return
     dispatch({ type: 'RESET_RESULTS' })
   }
+  const startNextTournament = () => {
+    if (!canEdit || !tournamentComplete || !champion) return
+    if (!window.confirm(`Award ${champion.name} one championship star and start the next tournament?`)) return
+
+    dispatch({ payload: { championId: champion.id }, type: 'NEXT_TOURNAMENT' })
+    setMatchFilter('all')
+  }
   const resetAll = () => {
     if (!canEdit) return
     if (!window.confirm('Reset all league teams and results?')) return
@@ -297,6 +313,7 @@ export function useLeagueTournament({ canEdit = true, userId = null } = {}) {
     remoteStatus,
     results: state.results,
     setMatchFilter,
+    startNextTournament,
     table,
     teams: state.teams,
     syncError,

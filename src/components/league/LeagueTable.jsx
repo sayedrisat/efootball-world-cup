@@ -1,4 +1,5 @@
 import { BarChart3, Crown } from 'lucide-react'
+import TeamStars from '../TeamStars'
 import LeagueTeamAvatar from './LeagueTeamAvatar'
 import { displayTeamName } from '../../utils/league/leagueRules'
 
@@ -51,7 +52,10 @@ function LeagueTable({ table, tournamentComplete }) {
                 </span>
                 <span className="league-table-team">
                   <LeagueTeamAvatar size="sm" team={team} />
-                  <strong>{displayTeamName(team)}</strong>
+                  <span className="league-table-name">
+                    <strong>{displayTeamName(team)}</strong>
+                    <TeamStars team={team} />
+                  </span>
                 </span>
                 <span>{team.played}</span>
                 <span>{team.homePlayed}</span>

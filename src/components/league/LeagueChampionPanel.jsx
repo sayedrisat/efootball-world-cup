@@ -1,9 +1,18 @@
-import { Crown, Sparkles } from 'lucide-react'
+import { Crown, RotateCw, Sparkles } from 'lucide-react'
 import { TROPHY_SRC } from '../../constants/tournament'
+import TeamStars from '../TeamStars'
 import LeagueTeamAvatar from './LeagueTeamAvatar'
 import { displayTeamName } from '../../utils/league/leagueRules'
 
-function LeagueChampionPanel({ champion, completedMatches, isAdmin = false, pendingMatches, table, tournamentComplete }) {
+function LeagueChampionPanel({
+  champion,
+  completedMatches,
+  isAdmin = false,
+  onNextTournament,
+  pendingMatches,
+  table,
+  tournamentComplete,
+}) {
   const leader = table[0]
 
   return (
@@ -13,7 +22,10 @@ function LeagueChampionPanel({ champion, completedMatches, isAdmin = false, pend
           <Crown size={16} />
           {tournamentComplete ? 'Champion Confirmed' : 'Current Leader'}
         </span>
-        <h1>{tournamentComplete ? displayTeamName(champion) : leader ? displayTeamName(leader) : 'Unlimited League'}</h1>
+        <div className="league-champion-name">
+          <h1>{tournamentComplete ? displayTeamName(champion) : leader ? displayTeamName(leader) : 'Unlimited League'}</h1>
+          <TeamStars team={tournamentComplete ? champion : leader} />
+        </div>
         <p>
           {tournamentComplete
             ? `${displayTeamName(champion)} finished top of the live table and wins the league title.`
@@ -27,6 +39,12 @@ function LeagueChampionPanel({ champion, completedMatches, isAdmin = false, pend
         <div className="league-progress-line">
           <span>{completedMatches} finished</span>
           <strong>{pendingMatches} pending</strong>
+          {isAdmin && tournamentComplete && (
+            <button className="league-next-tournament-button" onClick={onNextTournament} type="button">
+              <RotateCw size={16} />
+              Next Tournament
+            </button>
+          )}
         </div>
 
         {leader && (

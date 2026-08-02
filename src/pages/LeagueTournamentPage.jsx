@@ -22,6 +22,7 @@ function LeagueTournamentPage({ editable = false, tournament }) {
         champion={tournament.champion}
         completedMatches={tournament.completedMatches}
         isAdmin={editable}
+        onNextTournament={tournament.startNextTournament}
         pendingMatches={tournament.pendingMatches}
         table={tournament.table}
         tournamentComplete={tournament.tournamentComplete}
