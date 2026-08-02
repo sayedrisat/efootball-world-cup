@@ -1,14 +1,8 @@
-import { LoaderCircle, LogOut, ShieldCheck, UploadCloud } from 'lucide-react'
+import { LoaderCircle, LogOut, ShieldCheck, TriangleAlert, UploadCloud } from 'lucide-react'
 import AdminLoginPanel from '../components/league/AdminLoginPanel'
-import { useLeagueTournament } from '../hooks/league/useLeagueTournament'
 import LeagueTournamentPage from './LeagueTournamentPage'
 
-function LeagueAdminPage({ auth }) {
-  const tournament = useLeagueTournament({
-    canEdit: !auth.isConfigured || Boolean(auth.session),
-    userId: auth.session?.user?.id || null,
-  })
-
+function LeagueAdminPage({ auth, tournament }) {
   if (auth.loading) {
     return (
       <section className="league-card admin-loading-panel">
@@ -20,6 +14,30 @@ function LeagueAdminPage({ auth }) {
 
   if (auth.isConfigured && !auth.session) {
     return <AdminLoginPanel onResetPassword={auth.sendPasswordReset} onSignIn={auth.signIn} />
+  }
+
+  if (auth.adminLoading) {
+    return (
+      <section className="league-card admin-loading-panel">
+        <LoaderCircle className="spin" size={28} />
+        <strong>Verifying admin access</strong>
+      </section>
+    )
+  }
+
+  if (auth.isConfigured && auth.session && !auth.isAdmin) {
+    return (
+      <section className="league-card admin-access-panel">
+        <TriangleAlert size={30} />
+        <span className="league-kicker">Access Not Assigned</span>
+        <h1>Admin Permission Required</h1>
+        <p>{auth.adminError || 'This Auth user is signed in but is not registered as a tournament admin.'}</p>
+        <button className="league-reset-button" onClick={auth.signOut} type="button">
+          <LogOut size={16} />
+          Sign Out
+        </button>
+      </section>
+    )
   }
 
   return (

@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 
 export function useSupabaseAuth() {
+  const [adminError, setAdminError] = useState('')
+  const [adminLoading, setAdminLoading] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(() =>
     typeof window === 'undefined'
       ? false
@@ -39,6 +42,34 @@ export function useSupabaseAuth() {
       subscription.unsubscribe()
     }
   }, [])
+
+  useEffect(() => {
+    if (!supabase || !session) {
+      setAdminError('')
+      setAdminLoading(false)
+      setIsAdmin(false)
+      return undefined
+    }
+
+    let isActive = true
+    setAdminLoading(true)
+
+    supabase
+      .from('tournament_admins')
+      .select('user_id')
+      .eq('user_id', session.user.id)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!isActive) return
+        setIsAdmin(Boolean(data) && !error)
+        setAdminError(error?.message || '')
+        setAdminLoading(false)
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [session])
 
   const signIn = async (email, password) => {
     if (!supabase) throw new Error('Supabase is not configured yet.')
@@ -78,7 +109,10 @@ export function useSupabaseAuth() {
   }
 
   return {
+    adminError,
+    adminLoading,
     isConfigured: isSupabaseConfigured,
+    isAdmin,
     isPasswordRecovery,
     loading,
     sendPasswordReset,

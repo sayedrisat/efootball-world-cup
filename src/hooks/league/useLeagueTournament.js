@@ -91,7 +91,7 @@ function readFileAsDataUrl(file) {
   })
 }
 
-export function useLeagueTournament({ canEdit = true, userId = null } = {}) {
+export function useLeagueTournament({ canEdit = true, enabled = true, userId = null } = {}) {
   const localDraftRef = useRef(null)
   const [state, dispatch] = useReducer(leagueReducer, undefined, () => {
     const localState = readLeagueState()
@@ -105,6 +105,13 @@ export function useLeagueTournament({ canEdit = true, userId = null } = {}) {
   const [isAddingTeam, setIsAddingTeam] = useState(false)
   const remoteHydratedRef = useRef(!isSupabaseConfigured)
   const skipNextRemoteSaveRef = useRef(false)
+  const stateRef = useRef(state)
+  const canEditRef = useRef(canEdit)
+  const userIdRef = useRef(userId)
+
+  stateRef.current = state
+  canEditRef.current = canEdit
+  userIdRef.current = userId
 
   const fixtures = useMemo(() => generateFixtures(state.teams), [state.teams])
   const table = useMemo(
@@ -131,11 +138,11 @@ export function useLeagueTournament({ canEdit = true, userId = null } = {}) {
   }, [fixtures, matchFilter, state.results])
 
   useEffect(() => {
-    if (!isSupabaseConfigured) saveLeagueState(state)
+    saveLeagueState(state)
   }, [state])
 
   useEffect(() => {
-    if (!isSupabaseConfigured) return undefined
+    if (!isSupabaseConfigured || !enabled) return undefined
 
     let isActive = true
     setRemoteStatus('loading')
@@ -177,10 +184,31 @@ export function useLeagueTournament({ canEdit = true, userId = null } = {}) {
       isActive = false
       unsubscribe()
     }
+  }, [enabled])
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return undefined
+
+    const flushPendingState = () => {
+      if (!canEditRef.current || !userIdRef.current || !remoteHydratedRef.current) return
+      saveRemoteLeagueState(stateRef.current, userIdRef.current).catch(() => {})
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') flushPendingState()
+    }
+
+    window.addEventListener('pagehide', flushPendingState)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener('pagehide', flushPendingState)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
   }, [])
 
   useEffect(() => {
-    if (!isSupabaseConfigured || !canEdit || !userId || !remoteHydratedRef.current) return undefined
+    if (!isSupabaseConfigured || !enabled || !canEdit || !userId || !remoteHydratedRef.current) return undefined
 
     if (skipNextRemoteSaveRef.current) {
       skipNextRemoteSaveRef.current = false
@@ -202,7 +230,7 @@ export function useLeagueTournament({ canEdit = true, userId = null } = {}) {
     }, 450)
 
     return () => window.clearTimeout(saveTimer)
-  }, [canEdit, state, userId])
+  }, [canEdit, enabled, state, userId])
 
   const addTeam = async ({ file, image, name }) => {
     if (!canEdit) return
