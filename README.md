@@ -1,14 +1,16 @@
 # E-Football World Cup
 
-React tournament manager for a four-team E-Football World Cup.
+React tournament manager for a six-player E-Football World Cup.
 
 ## Features
 
 - Dynamic team names and icons
+- Two groups with three players each
 - Group-stage fixture and result entry
-- Live standings and points table
-- Rank 2 vs Rank 3 semi-final
-- Rank 1 vs semi-final winner final
+- Live standings and points tables
+- Top two players from each group qualify
+- Semi-final bracket: A1 vs B2 and B1 vs A2
+- Final between both semi-final winners
 - Penalty shoot-out fields for drawn knockout matches
 - Champion stars across next tournaments
 - LocalStorage persistence

@@ -5,14 +5,15 @@ function TeamSetup({ teams, onTeamChange, onIconUpload, onClearIcon }) {
   return (
     <section className="panel team-setup">
       <div className="section-heading">
-        <p>Team Setup</p>
-        <span>{teams.filter((team) => team.name.trim()).length}/4 ready</span>
+        <p>Player Setup</p>
+        <span>{teams.filter((team) => team.name.trim()).length}/{teams.length} ready</span>
       </div>
 
       <div className="team-grid">
         {teams.map((team) => (
           <div className="team-editor" key={team.id}>
             <div className="team-editor__preview">
+              <span className="group-pill">Group {team.groupId}</span>
               <TeamLogo team={team} />
               <TeamStars team={team} />
             </div>

@@ -28,6 +28,7 @@ function App() {
 
       <div className="dashboard-grid">
         <GroupMatches
+          groupStandings={tournament.groupStandings}
           teamsById={tournament.teamsById}
           groupResults={tournament.groupResults}
           rosterComplete={tournament.rosterComplete}
@@ -36,17 +37,20 @@ function App() {
 
         <div className="side-stack">
           <StandingsTable
-            standings={tournament.standings}
+            groupStandings={tournament.groupStandings}
             groupComplete={tournament.groupComplete}
           />
           <KnockoutPanel
             groupComplete={tournament.groupComplete}
-            firstSeed={tournament.firstSeed}
-            secondSeed={tournament.secondSeed}
-            thirdSeed={tournament.thirdSeed}
-            semiResult={tournament.semiResult}
+            groupAFirst={tournament.groupAFirst}
+            groupASecond={tournament.groupASecond}
+            groupBFirst={tournament.groupBFirst}
+            groupBSecond={tournament.groupBSecond}
+            semiAResult={tournament.semiAResult}
+            semiBResult={tournament.semiBResult}
             finalResult={tournament.finalResult}
-            semiWinner={tournament.semiWinner}
+            semiAWinner={tournament.semiAWinner}
+            semiBWinner={tournament.semiBWinner}
             champion={tournament.champion}
             onKnockoutChange={tournament.updateKnockout}
           />
@@ -56,15 +60,18 @@ function App() {
       {tournament.showOutput && (
         <OutputBanners
           teamsById={tournament.teamsById}
-          standings={tournament.standings}
+          groupStandings={tournament.groupStandings}
           groupResults={tournament.groupResults}
           groupComplete={tournament.groupComplete}
-          firstSeed={tournament.firstSeed}
-          secondSeed={tournament.secondSeed}
-          thirdSeed={tournament.thirdSeed}
-          semiResult={tournament.semiResult}
+          groupAFirst={tournament.groupAFirst}
+          groupASecond={tournament.groupASecond}
+          groupBFirst={tournament.groupBFirst}
+          groupBSecond={tournament.groupBSecond}
+          semiAResult={tournament.semiAResult}
+          semiBResult={tournament.semiBResult}
           finalResult={tournament.finalResult}
-          semiWinner={tournament.semiWinner}
+          semiAWinner={tournament.semiAWinner}
+          semiBWinner={tournament.semiBWinner}
           champion={tournament.champion}
         />
       )}

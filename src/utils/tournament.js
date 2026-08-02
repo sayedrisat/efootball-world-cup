@@ -1,4 +1,4 @@
-import { GROUP_MATCHES, TEAM_IDS } from '../constants/tournament'
+import { GROUP_MATCHES, GROUPS, TEAM_IDS } from '../constants/tournament'
 
 export function createTeams() {
   return TEAM_IDS.map((id, index) => ({
@@ -6,6 +6,7 @@ export function createTeams() {
     name: '',
     icon: '',
     stars: 0,
+    groupId: index < 3 ? 'A' : 'B',
     seed: index + 1,
   }))
 }
@@ -32,7 +33,8 @@ export function createTournamentState() {
     teams: createTeams(),
     groupResults: createGroupResults(),
     knockout: {
-      semi: createKnockoutResult(),
+      semiA: createKnockoutResult(),
+      semiB: createKnockoutResult(),
       final: createKnockoutResult(),
     },
   }
@@ -127,15 +129,21 @@ export function mergeSavedState(savedState) {
     teams: freshState.teams.map((team) => ({
       ...team,
       ...(savedState.teams?.find((savedTeam) => savedTeam.id === team.id) || {}),
+      groupId: team.groupId,
+      seed: team.seed,
     })),
     groupResults: {
       ...freshState.groupResults,
       ...(savedState.groupResults || {}),
     },
     knockout: {
-      semi: {
-        ...freshState.knockout.semi,
-        ...(savedState.knockout?.semi || {}),
+      semiA: {
+        ...freshState.knockout.semiA,
+        ...(savedState.knockout?.semiA || {}),
+      },
+      semiB: {
+        ...freshState.knockout.semiB,
+        ...(savedState.knockout?.semiB || {}),
       },
       final: {
         ...freshState.knockout.final,
@@ -145,7 +153,7 @@ export function mergeSavedState(savedState) {
   }
 }
 
-export function calculateStandings(teams, groupResults) {
+function calculateStandings(teams, groupMatches, groupResults) {
   const table = teams.reduce((rows, team) => {
     rows[team.id] = {
       ...team,
@@ -161,7 +169,7 @@ export function calculateStandings(teams, groupResults) {
     return rows
   }, {})
 
-  GROUP_MATCHES.forEach((match) => {
+  groupMatches.forEach((match) => {
     const result = groupResults[match.id]
     if (!isResultComplete(result)) return
 
@@ -207,4 +215,17 @@ export function calculateStandings(teams, groupResults) {
         displayName(a).localeCompare(displayName(b)),
     )
     .map((team, index) => ({ ...team, rank: index + 1 }))
+}
+
+export function calculateGroupStandings(teams, groupResults) {
+  return GROUPS.map((group) => {
+    const groupTeams = group.teamIds.map((teamId) => teams.find((team) => team.id === teamId)).filter(Boolean)
+    const groupMatches = GROUP_MATCHES.filter((match) => match.groupId === group.id)
+
+    return {
+      ...group,
+      matches: groupMatches,
+      standings: calculateStandings(groupTeams, groupMatches, groupResults),
+    }
+  })
 }

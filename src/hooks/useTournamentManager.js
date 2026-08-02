@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { GROUP_MATCHES } from '../constants/tournament'
 import { readTournamentState, saveTournamentState } from '../storage/tournamentStorage'
 import {
-  calculateStandings,
+  calculateGroupStandings,
   createGroupResults,
   createTournamentState,
   getWinnerId,
@@ -17,17 +17,23 @@ export function useTournamentManager() {
   const { teams, groupResults, knockout } = tournament
   const rosterComplete = teams.every((team) => team.name.trim())
   const teamsById = useMemo(() => Object.fromEntries(teams.map((team) => [team.id, team])), [teams])
-  const standings = useMemo(() => calculateStandings(teams, groupResults), [teams, groupResults])
+  const groupStandings = useMemo(() => calculateGroupStandings(teams, groupResults), [teams, groupResults])
   const groupComplete =
     rosterComplete && GROUP_MATCHES.every((match) => isResultComplete(groupResults[match.id]))
 
-  const firstSeed = groupComplete ? standings[0] : null
-  const secondSeed = groupComplete ? standings[1] : null
-  const thirdSeed = groupComplete ? standings[2] : null
-  const semiTeams = groupComplete ? [secondSeed, thirdSeed] : []
-  const semiWinnerId = getWinnerId(knockout.semi, semiTeams)
-  const semiWinner = teamsById[semiWinnerId] || null
-  const finalTeams = groupComplete && semiWinner ? [firstSeed, semiWinner] : []
+  const groupAStandings = groupStandings.find((group) => group.id === 'A')?.standings || []
+  const groupBStandings = groupStandings.find((group) => group.id === 'B')?.standings || []
+  const groupAFirst = groupComplete ? groupAStandings[0] : null
+  const groupASecond = groupComplete ? groupAStandings[1] : null
+  const groupBFirst = groupComplete ? groupBStandings[0] : null
+  const groupBSecond = groupComplete ? groupBStandings[1] : null
+  const semiATeams = groupComplete ? [groupAFirst, groupBSecond].filter(Boolean) : []
+  const semiBTeams = groupComplete ? [groupBFirst, groupASecond].filter(Boolean) : []
+  const semiAWinnerId = getWinnerId(knockout.semiA, semiATeams)
+  const semiBWinnerId = getWinnerId(knockout.semiB, semiBTeams)
+  const semiAWinner = teamsById[semiAWinnerId] || null
+  const semiBWinner = teamsById[semiBWinnerId] || null
+  const finalTeams = groupComplete && semiAWinner && semiBWinner ? [semiAWinner, semiBWinner] : []
   const championId = getWinnerId(knockout.final, finalTeams)
   const champion = teamsById[championId] || null
 
@@ -112,22 +118,25 @@ export function useTournamentManager() {
     champion,
     clearIcon,
     finalResult: knockout.final,
-    firstSeed,
     groupComplete,
     groupResults,
+    groupStandings,
+    groupAFirst,
+    groupASecond,
+    groupBFirst,
+    groupBSecond,
     resetAll,
     resetScores,
     rosterComplete,
-    secondSeed,
-    semiResult: knockout.semi,
-    semiWinner,
+    semiAResult: knockout.semiA,
+    semiAWinner,
+    semiBResult: knockout.semiB,
+    semiBWinner,
     setShowOutput,
     showOutput,
     startNextTournament,
-    standings,
     teams,
     teamsById,
-    thirdSeed,
     updateGroupResult,
     updateKnockout,
     updateTeam,

@@ -1,4 +1,4 @@
-import { GROUP_MATCHES, TROPHY_SRC } from '../constants/tournament'
+import { TROPHY_SRC } from '../constants/tournament'
 import { displayName, scoreText } from '../utils/tournament'
 import TeamBadge from './TeamBadge'
 import TeamLogo from './TeamLogo'
@@ -34,15 +34,18 @@ function StageResultRow({ homeTeam, awayTeam, result }) {
 
 function OutputBanners({
   teamsById,
-  standings,
+  groupStandings,
   groupResults,
   groupComplete,
-  firstSeed,
-  secondSeed,
-  thirdSeed,
-  semiResult,
+  groupAFirst,
+  groupASecond,
+  groupBFirst,
+  groupBSecond,
+  semiAResult,
+  semiBResult,
   finalResult,
-  semiWinner,
+  semiAWinner,
+  semiBWinner,
   champion,
 }) {
   return (
@@ -52,45 +55,68 @@ function OutputBanners({
         <h2>Group Stage Results</h2>
 
         <div className="banner-results">
-          {GROUP_MATCHES.map((match) => (
-            <ResultRow
-              key={match.id}
-              homeTeam={teamsById[match.homeId]}
-              awayTeam={teamsById[match.awayId]}
-              result={groupResults[match.id]}
-            />
+          {groupStandings.map((group) => (
+            <div className="banner-group" key={group.id}>
+              <div className="banner-group__title">{group.name}</div>
+              {group.matches.map((match) => (
+                <ResultRow
+                  key={match.id}
+                  homeTeam={teamsById[match.homeId]}
+                  awayTeam={teamsById[match.awayId]}
+                  result={groupResults[match.id]}
+                />
+              ))}
+            </div>
           ))}
         </div>
       </div>
 
       <div className="banner-card banner-card--table">
         <div className="banner-label">Group Ranking</div>
-        <h2>{groupComplete ? 'Top 3 Qualified' : 'Live Table'}</h2>
+        <h2>{groupComplete ? 'Semi Finalists' : 'Live Tables'}</h2>
 
         <div className="banner-standings">
-          {standings.map((team) => (
-            <div className="banner-standing-row" key={team.id}>
-              <span>{team.rank}</span>
-              <TeamLogo team={team} compact />
-              <strong>{displayName(team)}</strong>
-              <TeamStars team={team} />
-              <em>{team.points} pts</em>
-              {groupComplete && team.rank === 4 && <small>OUT</small>}
+          {groupStandings.map((group) => (
+            <div className="banner-group" key={group.id}>
+              <div className="banner-group__title">{group.name}</div>
+              {group.standings.map((team) => (
+                <div className="banner-standing-row" key={team.id}>
+                  <span>{team.rank}</span>
+                  <TeamLogo team={team} compact />
+                  <strong>{displayName(team)}</strong>
+                  <TeamStars team={team} />
+                  <em>{team.points} pts</em>
+                  {groupComplete && team.rank === 3 && <small>OUT</small>}
+                </div>
+              ))}
             </div>
           ))}
         </div>
       </div>
 
       <div className="banner-card banner-card--knockout">
-        <div className="banner-label">Semi Final</div>
-        <h2>Rank 2 vs Rank 3</h2>
+        <div className="banner-label">Semi Final 1</div>
+        <h2>A1 vs B2</h2>
         <StageResultRow
-          homeTeam={groupComplete ? secondSeed : null}
-          awayTeam={groupComplete ? thirdSeed : null}
-          result={semiResult}
+          homeTeam={groupComplete ? groupAFirst : null}
+          awayTeam={groupComplete ? groupBSecond : null}
+          result={semiAResult}
         />
         <div className="banner-advance">
-          Winner: <strong>{semiWinner ? displayName(semiWinner) : 'TBD'}</strong>
+          Winner: <strong>{semiAWinner ? displayName(semiAWinner) : 'TBD'}</strong>
+        </div>
+      </div>
+
+      <div className="banner-card banner-card--knockout">
+        <div className="banner-label">Semi Final 2</div>
+        <h2>B1 vs A2</h2>
+        <StageResultRow
+          homeTeam={groupComplete ? groupBFirst : null}
+          awayTeam={groupComplete ? groupASecond : null}
+          result={semiBResult}
+        />
+        <div className="banner-advance">
+          Winner: <strong>{semiBWinner ? displayName(semiBWinner) : 'TBD'}</strong>
         </div>
       </div>
 
@@ -98,8 +124,8 @@ function OutputBanners({
         <div className="banner-label">Final</div>
         <h2>Champion Match</h2>
         <StageResultRow
-          homeTeam={groupComplete ? firstSeed : null}
-          awayTeam={semiWinner}
+          homeTeam={semiAWinner}
+          awayTeam={semiBWinner}
           result={finalResult}
         />
         <div className="banner-advance">

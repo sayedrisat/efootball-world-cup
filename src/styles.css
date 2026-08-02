@@ -1,20 +1,23 @@
 :root {
-  color: #f7f3e8;
-  background: #080909;
+  color: #f8f5eb;
+  background: #07090d;
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  --gold: #f5c25c;
-  --ink: #080909;
-  --panel: #121414;
-  --line: rgba(245, 194, 92, 0.28);
-  --muted: #aaa493;
-  --green: #47c287;
-  --red: #ee6a5f;
-  --blue: #5aa7ff;
+  --gold: #f4c15d;
+  --gold-strong: #ffd979;
+  --ink: #07090d;
+  --panel: rgba(14, 18, 22, 0.88);
+  --panel-strong: #111821;
+  --line: rgba(244, 193, 93, 0.26);
+  --muted: #aeb5bd;
+  --green: #55d39a;
+  --red: #ef7065;
+  --blue: #67aefc;
+  --cyan: #5ce0d7;
 }
 
 * {
@@ -31,8 +34,9 @@ body {
   min-height: 100vh;
   margin: 0;
   background:
-    linear-gradient(135deg, rgba(245, 194, 92, 0.08), transparent 28%),
-    linear-gradient(315deg, rgba(71, 194, 135, 0.09), transparent 24%),
+    linear-gradient(120deg, rgba(244, 193, 93, 0.13), transparent 30%),
+    linear-gradient(300deg, rgba(92, 224, 215, 0.11), transparent 26%),
+    linear-gradient(180deg, rgba(103, 174, 252, 0.08), transparent 42%),
     var(--ink);
 }
 
@@ -65,29 +69,45 @@ select:disabled {
 }
 
 .app-shell {
-  width: min(1480px, 100%);
+  width: min(1540px, 100%);
   margin: 0 auto;
-  padding: 24px;
+  padding: 28px;
 }
 
 .app-header {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  min-height: 96px;
-  padding: 22px;
-  border: 1px solid var(--line);
+  min-height: 124px;
+  overflow: hidden;
+  padding: 28px;
+  border: 1px solid rgba(244, 193, 93, 0.34);
   border-radius: 8px;
   background:
-    linear-gradient(90deg, rgba(245, 194, 92, 0.16), rgba(18, 20, 20, 0.86)),
-    #111312;
-  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.26);
+    linear-gradient(105deg, rgba(244, 193, 93, 0.24), transparent 35%),
+    linear-gradient(280deg, rgba(92, 224, 215, 0.18), transparent 32%),
+    #10151b;
+  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.42);
+}
+
+.app-header::after {
+  position: absolute;
+  inset: auto 0 0 auto;
+  width: 54%;
+  height: 4px;
+  background: linear-gradient(90deg, transparent, var(--cyan), var(--gold));
+  content: "";
+}
+
+.app-header > div {
+  min-width: 0;
 }
 
 .eyebrow {
   margin: 0 0 8px;
-  color: var(--gold);
+  color: var(--gold-strong);
   font-size: 0.78rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -127,7 +147,7 @@ h1 {
   justify-content: center;
   min-height: 42px;
   padding: 0 16px;
-  border-radius: 8px;
+  border-radius: 7px;
   cursor: pointer;
   font-size: 0.88rem;
   font-weight: 900;
@@ -136,23 +156,25 @@ h1 {
 
 .primary-button {
   color: #171008;
-  background: linear-gradient(180deg, #ffe08c, #d79827);
-  box-shadow: 0 14px 28px rgba(245, 194, 92, 0.22);
+  background: linear-gradient(180deg, #ffe9a8, #e5a32c);
+  box-shadow: 0 14px 30px rgba(244, 193, 93, 0.26);
 }
 
 .secondary-button {
   color: #f8f3e6;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: #1b1d1c;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(10px);
 }
 
 .panel {
-  border: 1px solid rgba(245, 194, 92, 0.18);
+  border: 1px solid rgba(244, 193, 93, 0.2);
   border-radius: 8px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0)),
-    rgba(17, 19, 18, 0.94);
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
+    linear-gradient(160deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.015)),
+    var(--panel);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(16px);
 }
 
 .section-heading {
@@ -186,9 +208,9 @@ h1 {
 
 .team-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
-  padding: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  padding: 18px;
 }
 
 .team-editor {
@@ -196,10 +218,12 @@ h1 {
   grid-template-columns: auto minmax(0, 1fr);
   gap: 12px;
   min-width: 0;
-  padding: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  background: rgba(8, 9, 9, 0.38);
+  background:
+    linear-gradient(135deg, rgba(92, 224, 215, 0.07), transparent 40%),
+    rgba(5, 8, 12, 0.46);
 }
 
 .team-editor__preview {
@@ -229,10 +253,10 @@ select {
   width: 100%;
   min-width: 0;
   min-height: 40px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.13);
   border-radius: 8px;
   color: #fff8e5;
-  background: #0c0d0d;
+  background: rgba(4, 7, 10, 0.72);
 }
 
 input {
@@ -277,11 +301,11 @@ select {
   height: 58px;
   flex: 0 0 auto;
   overflow: hidden;
-  border: 1px solid rgba(245, 194, 92, 0.38);
+  border: 1px solid rgba(244, 193, 93, 0.46);
   border-radius: 8px;
   color: #1b1204;
   background:
-    linear-gradient(135deg, rgba(245, 194, 92, 0.9), rgba(71, 194, 135, 0.72)),
+    linear-gradient(135deg, rgba(255, 217, 121, 0.96), rgba(92, 224, 215, 0.74)),
     var(--gold);
   font-size: 1rem;
   font-weight: 950;
@@ -318,9 +342,9 @@ select {
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.18fr) minmax(360px, 0.82fr);
-  gap: 18px;
-  margin-top: 18px;
+  grid-template-columns: minmax(0, 1.08fr) minmax(410px, 0.92fr);
+  gap: 20px;
+  margin-top: 20px;
 }
 
 .side-stack {
@@ -329,21 +353,84 @@ select {
   align-content: start;
 }
 
+.group-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 0 9px;
+  border: 1px solid rgba(92, 224, 215, 0.3);
+  border-radius: 999px;
+  color: #dffefa;
+  background: rgba(92, 224, 215, 0.1);
+  font-size: 0.68rem;
+  font-weight: 950;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.group-match-grid,
+.standings-groups {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+}
+
+.group-block,
+.standings-group {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 8px;
+  background: rgba(4, 8, 12, 0.34);
+}
+
+.group-block__title,
+.standings-group__title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 46px;
+  padding: 0 14px;
+  border-bottom: 1px solid rgba(244, 193, 93, 0.14);
+  background:
+    linear-gradient(90deg, rgba(244, 193, 93, 0.12), transparent),
+    rgba(255, 255, 255, 0.025);
+}
+
+.group-block__title strong,
+.standings-group__title strong {
+  color: #fff7df;
+  font-size: 0.9rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.group-block__title span,
+.standings-group__title span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
 .match-list,
 .knockout-grid {
   display: grid;
   gap: 12px;
-  padding: 16px;
+  padding: 14px;
 }
 
 .match-editor {
   display: grid;
   gap: 10px;
   min-width: 0;
-  padding: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 8px;
-  background: rgba(8, 9, 9, 0.46);
+  background:
+    linear-gradient(110deg, rgba(255, 255, 255, 0.045), transparent 50%),
+    rgba(3, 6, 10, 0.48);
 }
 
 .match-editor--disabled {
@@ -442,17 +529,17 @@ select {
 .winner-chip {
   justify-self: start;
   padding: 7px 10px;
-  border: 1px solid rgba(71, 194, 135, 0.35);
+  border: 1px solid rgba(85, 211, 154, 0.42);
   border-radius: 8px;
   color: #c9f5df;
-  background: rgba(71, 194, 135, 0.12);
+  background: rgba(85, 211, 154, 0.13);
   font-size: 0.78rem;
   font-weight: 850;
 }
 
 .standings-table {
   display: grid;
-  padding: 10px;
+  padding: 0;
 }
 
 .standings-row {
@@ -462,7 +549,7 @@ select {
   gap: 8px;
   min-height: 48px;
   padding: 7px 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.065);
   color: #f8f3e6;
   font-size: 0.82rem;
   font-weight: 800;
@@ -505,11 +592,12 @@ select {
   min-height: 560px;
   overflow: hidden;
   padding: 34px;
-  border: 1px solid rgba(245, 194, 92, 0.42);
+  border: 1px solid rgba(244, 193, 93, 0.42);
   border-radius: 8px;
   background:
-    linear-gradient(145deg, rgba(245, 194, 92, 0.16), transparent 34%),
-    linear-gradient(180deg, #080909 0%, #101110 62%, #090a0a 100%);
+    linear-gradient(145deg, rgba(244, 193, 93, 0.18), transparent 34%),
+    linear-gradient(315deg, rgba(92, 224, 215, 0.1), transparent 34%),
+    linear-gradient(180deg, #07090d 0%, #111821 62%, #080b10 100%);
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
 }
 
@@ -560,7 +648,24 @@ select {
   position: relative;
   z-index: 1;
   display: grid;
-  gap: 12px;
+  gap: 16px;
+}
+
+.banner-group {
+  display: grid;
+  gap: 10px;
+}
+
+.banner-group__title {
+  justify-self: start;
+  padding: 6px 10px;
+  border: 1px solid rgba(92, 224, 215, 0.28);
+  border-radius: 999px;
+  color: #dffefa;
+  background: rgba(92, 224, 215, 0.09);
+  font-size: 0.78rem;
+  font-weight: 950;
+  text-transform: uppercase;
 }
 
 .banner-result-row {
@@ -568,9 +673,9 @@ select {
   grid-template-columns: minmax(0, 1fr) 108px minmax(0, 1fr);
   align-items: center;
   min-height: 64px;
-  border: 1px solid rgba(245, 194, 92, 0.38);
+  border: 1px solid rgba(244, 193, 93, 0.34);
   background:
-    linear-gradient(90deg, rgba(245, 194, 92, 0.1), rgba(255, 255, 255, 0.025)),
+    linear-gradient(90deg, rgba(244, 193, 93, 0.1), rgba(92, 224, 215, 0.04)),
     rgba(18, 20, 20, 0.86);
 }
 
@@ -612,8 +717,8 @@ select {
   gap: 10px;
   min-height: 58px;
   padding: 0 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .banner-standing-row > span:first-child {
@@ -651,8 +756,10 @@ select {
   gap: 12px;
   min-height: 96px;
   padding: 16px;
-  border: 1px solid rgba(245, 194, 92, 0.4);
-  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(244, 193, 93, 0.38);
+  background:
+    linear-gradient(90deg, rgba(92, 224, 215, 0.06), transparent 42%),
+    rgba(255, 255, 255, 0.04);
 }
 
 .banner-stage-row strong {
@@ -667,9 +774,9 @@ select {
   z-index: 1;
   margin-top: 18px;
   padding: 18px;
-  border-left: 4px solid var(--gold);
+  border-left: 4px solid var(--cyan);
   color: #d9d1bf;
-  background: rgba(245, 194, 92, 0.08);
+  background: rgba(92, 224, 215, 0.08);
   font-weight: 900;
   text-transform: uppercase;
 }
@@ -751,6 +858,12 @@ select {
   .app-header {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .app-header h1 {
+    max-width: 100%;
+    font-size: clamp(1.65rem, 7vw, 2.05rem);
+    line-height: 1;
   }
 
   .header-actions {

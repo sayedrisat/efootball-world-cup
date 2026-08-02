@@ -2,8 +2,8 @@ function AppHeader({ nextTournamentDisabled, onNextTournament, onResetScores, on
   return (
     <header className="app-header">
       <div>
-        <p className="eyebrow">E-Football Tournament</p>
-        <h1>World Cup Match Manager</h1>
+        <p className="eyebrow">E-Football 6 Player Tournament</p>
+        <h1>World Cup Finals Hub</h1>
       </div>
 
       <div className="header-actions">
