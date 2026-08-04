@@ -74,6 +74,46 @@ function LeagueTable({ table, tournamentComplete }) {
           )}
         </div>
       </div>
+
+      <div className="league-mobile-table" role="table" aria-label="Mobile league ranking">
+        {table.length === 0 ? (
+          <div className="league-table-empty">Add two or more teams to start the table.</div>
+        ) : (
+          table.map((team) => (
+            <article
+              className={`league-mobile-standing${
+                tournamentComplete && team.rank === 1 ? ' league-mobile-standing--champion' : ''
+              }`}
+              key={team.id}
+              role="row"
+            >
+              <span className="league-mobile-rank">
+                {team.rank}
+                {tournamentComplete && team.rank === 1 && <Crown size={13} />}
+              </span>
+              <LeagueTeamAvatar size="sm" team={team} />
+              <div className="league-mobile-team-info">
+                <span className="league-table-name">
+                  <strong>{displayTeamName(team)}</strong>
+                  <TeamStars team={team} />
+                </span>
+                <span>{team.played} played | {team.wins}W {team.draws}D {team.losses}L</span>
+              </div>
+              <div className="league-mobile-points">
+                <strong>{team.points}</strong>
+                <span>PTS</span>
+              </div>
+              <div className="league-mobile-stats">
+                <span>GF <strong>{team.goalsFor}</strong></span>
+                <span>GA <strong>{team.goalsAgainst}</strong></span>
+                <span>GD <strong>{formatGoalDifference(team.goalDifference)}</strong></span>
+                <span>Home <strong>{team.homePlayed}</strong></span>
+                <span>Away <strong>{team.awayPlayed}</strong></span>
+              </div>
+            </article>
+          ))
+        )}
+      </div>
     </section>
   )
 }
