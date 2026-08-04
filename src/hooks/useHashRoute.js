@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-export const ROUTES = ['/', '/rules', '/admin', '/world-cup']
+export const ROUTES = ['/', '/ranking', '/matches', '/outputs', '/rules', '/admin', '/world-cup']
 
 function readHashRoute() {
   const hashPath = window.location.hash.replace(/^#/, '') || '/'

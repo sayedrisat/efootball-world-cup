@@ -4,17 +4,12 @@ import LeagueStatStrip from '../components/league/LeagueStatStrip'
 import LeagueTable from '../components/league/LeagueTable'
 import LeagueTeamForm from '../components/league/LeagueTeamForm'
 import LeagueTeamRoster from '../components/league/LeagueTeamRoster'
-import LeagueSyncStatus from '../components/league/LeagueSyncStatus'
+import LeagueLiveStatusBar from '../components/league/LeagueLiveStatusBar'
 
 function LeagueTournamentPage({ editable = false, tournament }) {
   return (
     <div className="league-page">
-      <div className="league-live-bar">
-        <LeagueSyncStatus status={tournament.remoteStatus} />
-        {tournament.lastUpdated && (
-          <span>Updated {new Date(tournament.lastUpdated).toLocaleString()}</span>
-        )}
-      </div>
+      <LeagueLiveStatusBar lastUpdated={tournament.lastUpdated} status={tournament.remoteStatus} />
 
       {tournament.syncError && <div className="league-sync-error">{tournament.syncError}</div>}
 

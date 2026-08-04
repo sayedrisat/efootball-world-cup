@@ -1,7 +1,9 @@
-import { BookOpenText, Radio, ShieldCheck, Trophy } from 'lucide-react'
+import { BarChart3, BookOpenText, CalendarDays, Images, ShieldCheck, Trophy } from 'lucide-react'
 
 const navItems = [
-  { icon: Radio, label: 'Live League', to: '/' },
+  { icon: BarChart3, label: 'Ranking', to: '/ranking' },
+  { icon: CalendarDays, label: 'Matches', to: '/matches' },
+  { icon: Images, label: 'Outputs', to: '/outputs' },
   { icon: BookOpenText, label: 'Rules', to: '/rules' },
   { icon: ShieldCheck, label: 'Admin', to: '/admin' },
   { icon: Trophy, label: '6 Player Cup', to: '/world-cup' },
@@ -18,7 +20,7 @@ function Navigation({ currentRoute }) {
       <div className="route-links">
         {navItems.map((item) => {
           const Icon = item.icon
-          const isActive = currentRoute === item.to
+          const isActive = currentRoute === item.to || (currentRoute === '/' && item.to === '/ranking')
 
           return (
             <a

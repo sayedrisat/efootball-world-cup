@@ -4,15 +4,19 @@ import { useHashRoute } from './hooks/useHashRoute'
 import { useLeagueTournament } from './hooks/league/useLeagueTournament'
 import { useSupabaseAuth } from './hooks/useSupabaseAuth'
 import LeagueAdminPage from './pages/LeagueAdminPage'
-import LeaguePublicPage from './pages/LeaguePublicPage'
+import LeagueMatchesPage from './pages/LeagueMatchesPage'
+import LeagueOutputPage from './pages/LeagueOutputPage'
+import LeagueRankingPage from './pages/LeagueRankingPage'
 import LeagueRulesPage from './pages/LeagueRulesPage'
 import WorldCupPage from './pages/WorldCupPage'
 
 function getRoutePage(route, auth, tournament) {
+  if (route === '/matches') return <LeagueMatchesPage tournament={tournament} />
+  if (route === '/outputs') return <LeagueOutputPage tournament={tournament} />
   if (route === '/rules') return <LeagueRulesPage />
   if (route === '/admin') return <LeagueAdminPage auth={auth} tournament={tournament} />
   if (route === '/world-cup') return <WorldCupPage />
-  return <LeaguePublicPage tournament={tournament} />
+  return <LeagueRankingPage tournament={tournament} />
 }
 
 function App() {
