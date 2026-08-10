@@ -7,6 +7,9 @@ const distDir = path.join(rootDir, 'dist')
 const serverDir = path.join(distDir, 'server')
 const hostingDir = path.join(distDir, '.openai')
 
+// GitHub Pages serves this fallback for client-side routes such as /admin.
+await copyFile(path.join(distDir, 'index.html'), path.join(distDir, '404.html'))
+
 const mimeTypes = new Map([
   ['.css', 'text/css; charset=utf-8'],
   ['.html', 'text/html; charset=utf-8'],
