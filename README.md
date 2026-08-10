@@ -1,30 +1,29 @@
-# E-Football Tournament Hub
+# E-Football Group Cup
 
-React tournament manager with a public live league, protected admin control panel, and the previous six-player E-Football World Cup.
+Live React tournament manager with unlimited teams, a randomized group draw, live group standings, knockout rounds, admin controls and screenshot/print-ready outputs.
 
-## Features
+## Tournament flow
 
-- Unlimited league teams with team name and image input
-- Automatic home-away fixture generation for every team pair
-- Public live league at `#/` and admin controls at `#/admin`
-- Supabase realtime database, authentication, RLS, and team image storage
-- LocalStorage preview fallback when Supabase is not configured
-- Live league table with P, H, A, W, D, L, GF, GA, +Goal and points
-- Champion decided by the #1 league table rank after every match is complete
-- Route-based pages for Live League, Rules, Admin, and the original 6 Player Cup
-- Preserved six-player World Cup system with groups, knockouts, penalties, stars and output banners
+1. Admin adds any number of teams with an image URL or upload.
+2. Admin selects the preferred group size and creates a random balanced draw.
+3. Group scores update the live ranking automatically; the top two teams in each group qualify.
+4. The app creates a power-of-two knockout bracket and automatically supports byes when needed.
+5. Drawn knockout matches use penalties. Winners advance through separate rounds to the final.
+6. The Output route provides a clean share board that can be screenshotted, printed or saved as PDF.
 
-## Supabase setup
+## Routes
 
-1. Create a Supabase project and an admin user in Authentication > Users.
-2. Run `supabase/schema.sql` in the SQL Editor.
-3. Run the final admin membership query from that file with the admin email.
-4. Put `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `.env.local` for local development.
-5. Add the same names as GitHub Actions repository secrets for GitHub Pages.
+- `#/` Home
+- `#/teams` Teams and draw
+- `#/groups` Group stage
+- `#/knockout` Knockout stage
+- `#/ranking` Live ranking
+- `#/output` Share/print output
+- `#/admin` Protected tournament control room
 
-Never put a Supabase service-role key or an account password in frontend environment variables.
+## Supabase
 
-## Scripts
+The existing Supabase database, realtime, authentication, RLS and team-image storage backend are retained. Run `supabase/schema.sql`, create an Auth user, and register that user in `tournament_admins`. Put `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `.env.local`.
 
 ```bash
 npm install

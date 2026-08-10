@@ -1,14 +1,11 @@
-import { createLeagueState, LEAGUE_STORAGE_KEY } from '../../utils/league/leagueRules'
+import { createLeagueState, LEAGUE_STORAGE_KEY, normalizeTournamentState } from '../../utils/league/leagueRules'
 
 export function readLeagueState() {
   try {
     const savedState = JSON.parse(localStorage.getItem(LEAGUE_STORAGE_KEY))
     if (!savedState || typeof savedState !== 'object') return createLeagueState()
 
-    return {
-      teams: Array.isArray(savedState.teams) ? savedState.teams : [],
-      results: savedState.results && typeof savedState.results === 'object' ? savedState.results : {},
-    }
+    return normalizeTournamentState(savedState)
   } catch {
     return createLeagueState()
   }

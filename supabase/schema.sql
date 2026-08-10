@@ -41,8 +41,8 @@ create table if not exists public.league_tournaments (
   constraint league_results_are_object check (jsonb_typeof(results) = 'object')
 );
 
-insert into public.league_tournaments (slug)
-values ('main')
+insert into public.league_tournaments (slug, teams, results)
+values ('main', '[]'::jsonb, '{"version":3,"tournamentNumber":6,"status":"registration","stage":"Team Registration","teams":[],"groups":[],"matches":[],"winnerId":null,"updatedAt":"2026-08-10T00:00:00.000Z","history":[{"id":"history-1","tournamentNumber":1,"winnerId":"","winnerName":"England","completedAt":"2025-01-01T00:00:00.000Z"},{"id":"history-2","tournamentNumber":2,"winnerId":"","winnerName":"England","completedAt":"2025-02-01T00:00:00.000Z"},{"id":"history-3","tournamentNumber":3,"winnerId":"","winnerName":"Germany","completedAt":"2025-03-01T00:00:00.000Z"},{"id":"history-4","tournamentNumber":4,"winnerId":"","winnerName":"Spain","completedAt":"2025-04-01T00:00:00.000Z"},{"id":"history-5","tournamentNumber":5,"winnerId":"","winnerName":"Honduras","completedAt":"2025-05-01T00:00:00.000Z"}]}'::jsonb)
 on conflict (slug) do nothing;
 
 alter table public.league_tournaments enable row level security;

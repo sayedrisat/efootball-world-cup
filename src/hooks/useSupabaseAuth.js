@@ -12,6 +12,7 @@ export function useSupabaseAuth() {
         new URLSearchParams(window.location.search).get('type') === 'recovery' ||
         new URLSearchParams(window.location.search).get('recovery') === '1',
   )
+  /** @type {[any, Function]} */
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(isSupabaseConfigured)
 

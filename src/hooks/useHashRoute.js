@@ -1,25 +1,4 @@
 import { useEffect, useState } from 'react'
-
-export const ROUTES = ['/', '/ranking', '/matches', '/outputs', '/rules', '/admin', '/world-cup']
-
-function readHashRoute() {
-  const hashPath = window.location.hash.replace(/^#/, '') || '/'
-  const normalizedPath = hashPath.startsWith('/') ? hashPath : `/${hashPath}`
-
-  return ROUTES.includes(normalizedPath) ? normalizedPath : '/'
-}
-
-export function useHashRoute() {
-  const [route, setRoute] = useState(readHashRoute)
-
-  useEffect(() => {
-    const handleHashChange = () => setRoute(readHashRoute())
-
-    window.addEventListener('hashchange', handleHashChange)
-    handleHashChange()
-
-    return () => window.removeEventListener('hashchange', handleHashChange)
-  }, [])
-
-  return route
-}
+export const ROUTES = ['/', '/teams', '/groups', '/knockout', '/ranking', '/output', '/admin']
+function readRoute() { const value = window.location.hash.replace(/^#/, '') || '/'; return ROUTES.includes(value) ? value : '/' }
+export function useHashRoute() { const [route, setRoute] = useState(readRoute); useEffect(() => { const update = () => setRoute(readRoute()); window.addEventListener('hashchange', update); return () => window.removeEventListener('hashchange', update) }, []); return route }

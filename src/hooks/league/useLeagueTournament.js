@@ -1,88 +1,29 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import {
-  isSupabaseConfigured,
-  readRemoteLeagueState,
-  removeTeamIcon,
-  saveRemoteLeagueState,
-  subscribeToRemoteLeagueState,
-  uploadTeamIcon,
+  isSupabaseConfigured, readRemoteLeagueState, removeTeamIcon, saveRemoteLeagueState,
+  subscribeToRemoteLeagueState, uploadTeamIcon,
 } from '../../services/leagueSupabase'
 import { readLeagueState, saveLeagueState } from '../../storage/league/leagueStorage'
 import {
-  calculateLeagueTable,
-  createLeagueState,
-  createNextTournamentTeams,
-  createTeam,
-  emptyResult,
-  filterResultsByTeam,
-  generateFixtures,
-  isResultComplete,
-  normalizeScore,
+  advanceKnockout, calculateGroupTables, createKnockoutBracket, createLeagueState,
+  createRandomGroups, createTeam, generateGroupFixtures, getQualifiers, isResultComplete,
+  normalizeScore, resolveKnockoutWinner,
 } from '../../utils/league/leagueRules'
 
-function leagueReducer(state, action) {
-  if (action.type === 'HYDRATE') {
-    return action.payload
-  }
-
-  if (action.type === 'ADD_TEAM') {
-    const team = action.payload.team
-    if (!team.name) return state
-
-    return {
-      ...state,
-      teams: [...state.teams, team],
-    }
-  }
-
-  if (action.type === 'REMOVE_TEAM') {
-    const teams = state.teams.filter((team) => team.id !== action.payload.teamId)
-
-    return {
-      ...state,
-      results: filterResultsByTeam(state.results, teams),
-      teams,
-    }
-  }
-
-  if (action.type === 'UPDATE_RESULT') {
-    const previousResult = state.results[action.payload.fixtureId] || emptyResult
-
-    return {
-      ...state,
-      results: {
-        ...state.results,
-        [action.payload.fixtureId]: {
-          ...previousResult,
-          [action.payload.field]: normalizeScore(action.payload.value),
-        },
-      },
-    }
-  }
-
-  if (action.type === 'RESET_RESULTS') {
-    return {
-      ...state,
-      results: {},
-    }
-  }
-
-  if (action.type === 'NEXT_TOURNAMENT') {
-    return {
-      ...state,
-      results: {},
-      teams: createNextTournamentTeams(state.teams, action.payload.championId),
-    }
-  }
-
-  if (action.type === 'RESET_ALL') {
-    return createLeagueState()
-  }
-
+function reducer(state, action) {
+  if (action.type === 'HYDRATE') return action.payload
+  if (action.type === 'ADD_TEAM') return { ...state, teams: [...state.teams, action.team] }
+  if (action.type === 'REMOVE_TEAM') return { ...state, teams: state.teams.filter((team) => team.id !== action.id) }
+  if (action.type === 'DRAW') return { ...state, groups: action.groups, groupResults: {}, knockout: [], phase: 'groups', groupSize: action.groupSize, drawVersion: state.drawVersion + 1 }
+  if (action.type === 'GROUP_SCORE') return { ...state, groupResults: { ...state.groupResults, [action.id]: { ...(state.groupResults[action.id] || {}), [action.field]: normalizeScore(action.value) } } }
+  if (action.type === 'START_KNOCKOUT') return { ...state, knockout: action.matches, phase: 'knockout' }
+  if (action.type === 'KNOCKOUT_SCORE') return { ...state, knockout: state.knockout.map((match) => match.id === action.id ? { ...match, result: { ...match.result, [action.field]: normalizeScore(action.value) }, winnerId: '' } : match) }
+  if (action.type === 'ADVANCE') return { ...state, knockout: advanceKnockout(action.matches) }
+  if (action.type === 'RESET') return createLeagueState()
   return state
 }
 
-function readFileAsDataUrl(file) {
+function readFile(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onerror = () => reject(new Error('Could not read the selected image.'))
@@ -92,261 +33,82 @@ function readFileAsDataUrl(file) {
 }
 
 export function useLeagueTournament({ canEdit = true, enabled = true, userId = null } = {}) {
-  const localDraftRef = useRef(null)
-  const [state, dispatch] = useReducer(leagueReducer, undefined, () => {
-    const localState = readLeagueState()
-    localDraftRef.current = localState
-    return localState
-  })
-  const [matchFilter, setMatchFilter] = useState('all')
+  const [state, dispatch] = useReducer(reducer, undefined, readLeagueState)
   const [remoteStatus, setRemoteStatus] = useState(isSupabaseConfigured ? 'loading' : 'local')
   const [syncError, setSyncError] = useState('')
   const [lastUpdated, setLastUpdated] = useState(null)
-  const [isAddingTeam, setIsAddingTeam] = useState(false)
-  const remoteHydratedRef = useRef(!isSupabaseConfigured)
-  const skipNextRemoteSaveRef = useRef(false)
-  const stateRef = useRef(state)
-  const canEditRef = useRef(canEdit)
-  const userIdRef = useRef(userId)
+  const hydrated = useRef(!isSupabaseConfigured)
+  const skipSave = useRef(false)
+  const fixtures = useMemo(() => generateGroupFixtures(state.groups), [state.groups])
+  const groupTables = useMemo(() => calculateGroupTables(state.teams, state.groups, state.groupResults), [state.teams, state.groups, state.groupResults])
+  const teamsById = useMemo(() => Object.fromEntries(state.teams.map((team) => [team.id, team])), [state.teams])
+  const groupComplete = fixtures.length > 0 && fixtures.every((fixture) => isResultComplete(state.groupResults[fixture.id]))
+  const qualifiers = useMemo(() => getQualifiers(groupTables), [groupTables])
+  const activeRound = state.knockout.length ? Math.min(...state.knockout.filter((match) => !match.winnerId).map((match) => match.round).concat(Infinity)) : null
+  const visibleKnockout = state.knockout.filter((match) => match.round === activeRound || (activeRound === Infinity && match.round === 2))
+  const finalMatch = state.knockout.find((match) => match.round === 2)
+  const championId = finalMatch ? resolveKnockoutWinner(finalMatch) : ''
+  const champion = teamsById[championId] || null
 
-  stateRef.current = state
-  canEditRef.current = canEdit
-  userIdRef.current = userId
-
-  const fixtures = useMemo(() => generateFixtures(state.teams), [state.teams])
-  const table = useMemo(
-    () => calculateLeagueTable(state.teams, fixtures, state.results),
-    [fixtures, state.results, state.teams],
-  )
-
-  const completedMatches = fixtures.filter((fixture) => isResultComplete(state.results[fixture.id])).length
-  const pendingMatches = fixtures.length - completedMatches
-  const tournamentReady = state.teams.length >= 2
-  const tournamentComplete = tournamentReady && fixtures.length > 0 && pendingMatches === 0
-  const champion = tournamentComplete ? table[0] : null
-
-  const filteredFixtures = useMemo(() => {
-    if (matchFilter === 'completed') {
-      return fixtures.filter((fixture) => isResultComplete(state.results[fixture.id]))
-    }
-
-    if (matchFilter === 'pending') {
-      return fixtures.filter((fixture) => !isResultComplete(state.results[fixture.id]))
-    }
-
-    return fixtures
-  }, [fixtures, matchFilter, state.results])
-
-  useEffect(() => {
-    saveLeagueState(state)
-  }, [state])
-
+  useEffect(() => { saveLeagueState(state) }, [state])
   useEffect(() => {
     if (!isSupabaseConfigured || !enabled) return undefined
-
-    let isActive = true
-    setRemoteStatus('loading')
-
-    readRemoteLeagueState()
-      .then(({ state: remoteState, updatedAt }) => {
-        if (!isActive) return
-        skipNextRemoteSaveRef.current = true
-        remoteHydratedRef.current = true
-        dispatch({ payload: remoteState, type: 'HYDRATE' })
-        setLastUpdated(updatedAt)
-        setRemoteStatus('live')
-      })
-      .catch((error) => {
-        if (!isActive) return
-        remoteHydratedRef.current = true
-        setSyncError(error.message || 'Could not load live tournament data.')
-        setRemoteStatus('error')
-      })
-
-    const unsubscribe = subscribeToRemoteLeagueState(
-      (remoteState, updatedAt) => {
-        if (!isActive) return
-        skipNextRemoteSaveRef.current = true
-        remoteHydratedRef.current = true
-        dispatch({ payload: remoteState, type: 'HYDRATE' })
-        setLastUpdated(updatedAt)
-        setSyncError('')
-        setRemoteStatus('live')
-      },
-      (status) => {
-        if (!isActive) return
-        if (status === 'SUBSCRIBED') setRemoteStatus((current) => (current === 'saving' ? current : 'live'))
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setRemoteStatus('error')
-      },
-    )
-
-    return () => {
-      isActive = false
-      unsubscribe()
-    }
+    let active = true
+    readRemoteLeagueState().then(({ state: remote, updatedAt }) => {
+      if (!active) return
+      hydrated.current = true; skipSave.current = true; dispatch({ type: 'HYDRATE', payload: remote })
+      setLastUpdated(updatedAt); setRemoteStatus('live')
+    }).catch((error) => { if (active) { hydrated.current = true; setSyncError(error.message); setRemoteStatus('error') } })
+    const unsubscribe = subscribeToRemoteLeagueState((remote, updatedAt) => {
+      if (!active) return
+      skipSave.current = true; dispatch({ type: 'HYDRATE', payload: remote }); setLastUpdated(updatedAt); setRemoteStatus('live')
+    }, (status) => { if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setRemoteStatus('error') })
+    return () => { active = false; unsubscribe() }
   }, [enabled])
-
   useEffect(() => {
-    if (!isSupabaseConfigured) return undefined
-
-    const flushPendingState = () => {
-      if (!canEditRef.current || !userIdRef.current || !remoteHydratedRef.current) return
-      saveRemoteLeagueState(stateRef.current, userIdRef.current).catch(() => {})
-    }
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') flushPendingState()
-    }
-
-    window.addEventListener('pagehide', flushPendingState)
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-
-    return () => {
-      window.removeEventListener('pagehide', flushPendingState)
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!isSupabaseConfigured || !enabled || !canEdit || !userId || !remoteHydratedRef.current) return undefined
-
-    if (skipNextRemoteSaveRef.current) {
-      skipNextRemoteSaveRef.current = false
-      return undefined
-    }
-
+    if (!isSupabaseConfigured || !enabled || !canEdit || !userId || !hydrated.current) return undefined
+    if (skipSave.current) { skipSave.current = false; return undefined }
     setRemoteStatus('saving')
-    const saveTimer = window.setTimeout(() => {
-      saveRemoteLeagueState(state, userId)
-        .then((updatedAt) => {
-          setLastUpdated(updatedAt)
-          setSyncError('')
-          setRemoteStatus('live')
-        })
-        .catch((error) => {
-          setSyncError(error.message || 'Could not publish the tournament update.')
-          setRemoteStatus('error')
-        })
-    }, 450)
-
-    return () => window.clearTimeout(saveTimer)
-  }, [canEdit, enabled, state, userId])
+    const timer = window.setTimeout(() => saveRemoteLeagueState(state, userId).then((updatedAt) => {
+      setLastUpdated(updatedAt); setSyncError(''); setRemoteStatus('live')
+    }).catch((error) => { setSyncError(error.message); setRemoteStatus('error') }), 450)
+    return () => window.clearTimeout(timer)
+  }, [state, canEdit, enabled, userId])
 
   const addTeam = async ({ file, image, name }) => {
-    if (!canEdit) return
-    setIsAddingTeam(true)
-    setSyncError('')
-
-    try {
-      const team = createTeam({ image, name })
-
-      if (file && isSupabaseConfigured) {
-        const uploadedImage = await uploadTeamIcon(file, team.id, userId)
-        Object.assign(team, uploadedImage)
-      } else if (file) {
-        team.image = await readFileAsDataUrl(file)
-      }
-
-      dispatch({ payload: { team }, type: 'ADD_TEAM' })
-    } catch (error) {
-      setSyncError(error.message || 'Could not add this team.')
-      throw error
-    } finally {
-      setIsAddingTeam(false)
-    }
+    if (!canEdit || !name.trim()) return
+    const team = createTeam({ image, name })
+    if (file && isSupabaseConfigured) Object.assign(team, await uploadTeamIcon(file, team.id, userId))
+    else if (file) team.image = await readFile(file)
+    dispatch({ type: 'ADD_TEAM', team })
   }
-
-  const importLocalDraft = async () => {
-    const localDraft = localDraftRef.current
-    if (!canEdit || !userId || !localDraft) return
-
-    setRemoteStatus('saving')
-    setSyncError('')
-
-    try {
-      const updatedAt = await saveRemoteLeagueState(localDraft, userId)
-      skipNextRemoteSaveRef.current = true
-      dispatch({ payload: localDraft, type: 'HYDRATE' })
-      setLastUpdated(updatedAt)
-      setRemoteStatus('live')
-    } catch (error) {
-      setSyncError(error.message || 'Could not import local tournament data.')
-      setRemoteStatus('error')
-    }
+  const removeTeam = async (id) => {
+    if (!canEdit || state.phase !== 'setup') return
+    const team = state.teams.find((item) => item.id === id)
+    if (team?.imagePath && isSupabaseConfigured) await removeTeamIcon(team.imagePath)
+    dispatch({ type: 'REMOVE_TEAM', id })
   }
-
-  const removeTeam = async (teamId) => {
-    if (!canEdit) return
-    const team = state.teams.find((item) => item.id === teamId)
-
-    if (team?.imagePath && isSupabaseConfigured) {
-      try {
-        await removeTeamIcon(team.imagePath)
-      } catch (error) {
-        setSyncError(error.message || 'Team removed, but its image could not be deleted.')
-      }
-    }
-
-    dispatch({ payload: { teamId }, type: 'REMOVE_TEAM' })
+  const createDraw = (groupSize) => {
+    if (!canEdit || state.teams.length < 2) return
+    dispatch({ type: 'DRAW', groups: createRandomGroups(state.teams, groupSize), groupSize })
   }
-
-  const resetResults = () => {
-    if (!canEdit) return
-    dispatch({ type: 'RESET_RESULTS' })
+  const startKnockout = () => {
+    if (!canEdit || !groupComplete) return
+    dispatch({ type: 'START_KNOCKOUT', matches: createKnockoutBracket(qualifiers) })
   }
-  const startNextTournament = () => {
-    if (!canEdit || !tournamentComplete || !champion) return
-    if (!window.confirm(`Award ${champion.name} one championship star and start the next tournament?`)) return
-
-    dispatch({ payload: { championId: champion.id }, type: 'NEXT_TOURNAMENT' })
-    setMatchFilter('all')
+  const advanceRound = () => {
+    if (!canEdit || !visibleKnockout.length || visibleKnockout.some((match) => !resolveKnockoutWinner(match))) return
+    dispatch({ type: 'ADVANCE', matches: state.knockout })
   }
   const resetAll = () => {
-    if (!canEdit) return
-    if (!window.confirm('Reset all league teams and results?')) return
-    dispatch({ type: 'RESET_ALL' })
-  }
-  const updateResult = (fixtureId, field, value) => {
-    if (!canEdit) return
-    dispatch({
-      payload: {
-        field,
-        fixtureId,
-        value,
-      },
-      type: 'UPDATE_RESULT',
-    })
+    if (canEdit && window.confirm('Delete the current tournament and start fresh?')) dispatch({ type: 'RESET' })
   }
 
   return {
-    addTeam,
-    champion,
-    completedMatches,
-    filteredFixtures,
-    fixtures,
-    isAddingTeam,
-    isSupabaseConfigured,
-    importLocalDraft,
-    lastUpdated,
-    localDraftAvailable:
-      isSupabaseConfigured &&
-      (localDraftRef.current?.teams?.length > 0 || Object.keys(localDraftRef.current?.results || {}).length > 0) &&
-      state.teams.length === 0 &&
-      Object.keys(state.results).length === 0,
-    matchFilter,
-    pendingMatches,
-    removeTeam,
-    resetAll,
-    resetResults,
-    remoteStatus,
-    results: state.results,
-    setMatchFilter,
-    startNextTournament,
-    table,
-    teams: state.teams,
-    syncError,
-    tournamentComplete,
-    tournamentReady,
-    updateResult,
+    ...state, activeRound, addTeam, advanceRound, canEdit, champion, createDraw, fixtures,
+    groupComplete, groupTables, isSupabaseConfigured, lastUpdated, qualifiers, remoteStatus,
+    removeTeam, resetAll, startKnockout, syncError, teamsById, visibleKnockout,
+    updateGroupResult: (id, field, value) => canEdit && dispatch({ type: 'GROUP_SCORE', id, field, value }),
+    updateKnockoutResult: (id, field, value) => canEdit && dispatch({ type: 'KNOCKOUT_SCORE', id, field, value }),
   }
 }
