@@ -10,6 +10,13 @@ const hostingDir = path.join(distDir, '.openai')
 // GitHub Pages serves this fallback for client-side routes such as /admin.
 await copyFile(path.join(distDir, 'index.html'), path.join(distDir, '404.html'))
 
+// Materialize public routes so direct links return HTTP 200 on static hosts.
+for (const route of ['admin', 'rankings', 'teams', 'groups', 'matches', 'history']) {
+  const routeDir = path.join(distDir, route)
+  await mkdir(routeDir, { recursive: true })
+  await copyFile(path.join(distDir, 'index.html'), path.join(routeDir, 'index.html'))
+}
+
 const mimeTypes = new Map([
   ['.css', 'text/css; charset=utf-8'],
   ['.html', 'text/html; charset=utf-8'],
