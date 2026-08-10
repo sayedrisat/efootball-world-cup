@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "vite build && node scripts/prepare-sites-build.mjs",
-    "preview": "vite preview --host 127.0.0.1"
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node --experimental-strip-types --experimental-specifier-resolution=node --test tests/*.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.111.0",

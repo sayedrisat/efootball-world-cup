@@ -1,45 +1,756 @@
-import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from 'react'
+import { Navigate, NavLink, Route, Routes } from 'react-router-dom'
 import gsap from 'gsap'
-import { BarChart3, CalendarDays, Check, ChevronRight, Crown, Eye, EyeOff, LayoutGrid, LockKeyhole, LogOut, Menu, Plus, Shield, Sparkles, Trophy, Users, X } from 'lucide-react'
+import {
+  BarChart3,
+  CalendarDays,
+  Check,
+  ChevronRight,
+  CircleAlert,
+  Crown,
+  Eye,
+  EyeOff,
+  GitBranch,
+  LayoutGrid,
+  LockKeyhole,
+  LogOut,
+  Menu,
+  Plus,
+  RotateCcw,
+  Shield,
+  Sparkles,
+  Swords,
+  Trophy,
+  Users,
+  X,
+} from 'lucide-react'
 import { useSupabaseAuth } from './hooks/useSupabaseAuth'
 import { useTournament } from './hooks/useTournament'
-import type { Group, Match, Standing, Team } from './types'
+import type { Group, KnockoutMatch, Match, Standing, Team } from './types'
 import { standings } from './utils/tournament'
 
-const fallback = (name: string) => `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=102a54&color=45d7ff&bold=true&size=256`
-function Logo({ team, small=false }: {team?: Team; small?: boolean}) { const [bad,setBad]=useState(false); return <img className={`team-logo ${small?'small':''}`} src={!bad&&team?.imageUrl?team.imageUrl:fallback(team?.name||'?')} alt={team?`${team.name} logo`:''} onError={()=>setBad(true)} /> }
-function Stars({ count=0 }: {count?:number}) { return count ? <span className="stars" aria-label={`${count} championships`}>{'★'.repeat(count)}</span> : null }
+const fallback = (name: string) =>
+  `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=102a54&color=45d7ff&bold=true&size=256`
 
-function PageReveal({children,className=''}:{children:ReactNode;className?:string}) { const ref=useRef<HTMLDivElement>(null); useLayoutEffect(()=>{const ctx=gsap.context(()=>gsap.from('[data-reveal]',{y:24,opacity:0,duration:.7,stagger:.08,ease:'power3.out'}),ref);return()=>ctx.revert()},[]); return <div ref={ref} className={className}>{children}</div> }
+function Logo({ team, small = false }: { team?: Team; small?: boolean }) {
+  const [bad, setBad] = useState(false)
 
-function Navigation(){ const [open,setOpen]=useState(false); return <header className="nav"><NavLink className="brand" to="/"><span><Trophy/></span><strong>EFC</strong><small>WORLD SERIES</small></NavLink><button className="menu" onClick={()=>setOpen(!open)} aria-label="Toggle menu"><Menu/></button><nav className={open?'open':''}>{[['/','Home'],['/rankings','Rankings'],['/teams','Teams'],['/groups','Groups'],['/matches','Matches'],['/history','History']].map(([to,label])=><NavLink key={to} to={to} onClick={()=>setOpen(false)}>{label}</NavLink>)}</nav><div className="live-pill"><i/> LIVE SYSTEM</div></header> }
+  useEffect(() => setBad(false), [team?.imageUrl])
 
-function App(){ const auth=useSupabaseAuth(); const canEdit=Boolean(auth.isConfigured&&auth.session&&auth.isAdmin); const t=useTournament(canEdit,auth.session?.user?.id); return <><Navigation/><Routes><Route path="/" element={<Home t={t}/>}/><Route path="/rankings" element={<Rankings t={t}/>}/><Route path="/teams" element={<Teams t={t}/>}/><Route path="/groups" element={<Groups t={t}/>}/><Route path="/matches" element={<Matches t={t} admin={false}/>}/><Route path="/history" element={<History t={t}/>}/><Route path="/admin" element={<Admin auth={auth} t={t}/>}/><Route path="*" element={<Navigate to="/"/>}/></Routes>{t.message&&<div className="toast"><Check/> {t.message}</div>}</> }
+  return (
+    <img
+      className={`team-logo ${small ? 'small' : ''}`}
+      src={!bad && team?.imageUrl ? team.imageUrl : fallback(team?.name || '?')}
+      alt={team ? `${team.name} logo` : ''}
+      onError={() => setBad(true)}
+    />
+  )
+}
 
-function Home({t}:any){const {state,stars,allStandings}=t;const champ=state.history.at(-1);const hero=useRef(null);useLayoutEffect(()=>{const ctx=gsap.context(()=>{const tl=gsap.timeline();tl.from('.eyebrow,.hero h1,.hero-copy',{y:40,opacity:0,stagger:.12,duration:.8}).from('.cup-wrap',{scale:.6,opacity:0,rotation:8,duration:1.1,ease:'back.out(1.4)'},'-=.5').from('.metric',{y:20,opacity:0,stagger:.1},'-=.4')},hero);return()=>ctx.revert()},[]);return <main ref={hero}><section className="hero"><div><p className="eyebrow"><span/> THE DIGITAL PITCH AWAITS</p><h1>eFOOTBALL<br/><em>CHAMPIONSHIP</em></h1><p className="hero-copy">Elite competitors. One digital arena. Every goal writes history.</p><div className="actions"><NavLink className="button primary" to="/rankings">Live ranking <ChevronRight/></NavLink><NavLink className="button ghost" to="/teams">View teams</NavLink></div></div><div className="cup-wrap"><div className="orbit one"/><div className="orbit two"/><img src={`${import.meta.env.BASE_URL}efootball-cup.png`} alt="Championship trophy"/><div className="cup-label">SEASON {String(state.tournamentNumber).padStart(2,'0')}<strong>{state.status==='completed'?'COMPLETE':'LIVE'}</strong></div></div></section><section className="metric-strip"><div className="metric"><small>Current tournament</small><strong>#{String(state.tournamentNumber).padStart(2,'0')}</strong></div><div className="metric"><small>Status</small><strong className="cyan">{state.status==='registration'?'REGISTRATION':state.status.toUpperCase()}</strong></div><div className="metric"><small>Contenders</small><strong>{state.teams.length}</strong></div><div className="metric"><small>Current leader</small><strong>{allStandings[0]?.name||'TBD'}</strong></div></section><section className="section"><div className="section-head"><div><p className="eyebrow">LEGACY ARCHIVE</p><h2>Champions of the arena</h2></div><NavLink to="/history">View full history <ChevronRight/></NavLink></div><div className="champion-preview">{state.history.slice(-5).reverse().map((h:any,i:number)=><article key={h.id} className={i===0?'featured':''}><span>TOURNAMENT {String(h.tournamentNumber).padStart(2,'0')}</span><Crown/><h3>{h.winnerName}</h3><Stars count={stars[h.winnerName.toLowerCase()]}/></article>)}</div>{champ&&<p className="broadcast"><i/> Reigning champion: <strong>{champ.winnerName}</strong></p>}</section></main>}
+function Stars({ count = 0 }: { count?: number }) {
+  return count ? (
+    <span className="stars" aria-label={`${count} championships`}>
+      {'★'.repeat(count)}
+    </span>
+  ) : null
+}
 
-function PageHead({kicker,title,text}:{kicker:string;title:string;text:string}){return <div className="page-head" data-reveal><p className="eyebrow">{kicker}</p><h1>{title}</h1><p>{text}</p></div>}
-function Empty({icon,title,text}:{icon:ReactNode;title:string;text:string}){return <div className="empty">{icon}<h2>{title}</h2><p>{text}</p></div>}
+function PageReveal({ children, className = '' }: { children: ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null)
 
-function RankingTable({rows}:{rows:Standing[]}){const ref=useRef(null);useLayoutEffect(()=>{const ctx=gsap.context(()=>gsap.from('.standing-row',{x:-28,opacity:0,stagger:.06,duration:.55,ease:'power2.out'}),ref);return()=>ctx.revert()},[rows.length]);return <div className="table-wrap" ref={ref}><div className="standing-row table-head"><span>#</span><span>Club</span><span>P</span><span>W</span><span>D</span><span>L</span><span>GF</span><span>GA</span><span>GD</span><span>PTS</span></div>{rows.map(r=><div className={`standing-row rank-${r.position}`} key={r.id}><b>{String(r.position).padStart(2,'0')}</b><span className="club"><Logo team={r} small/><strong>{r.name}</strong></span><span>{r.played}</span><span>{r.wins}</span><span>{r.draws}</span><span>{r.losses}</span><span>{r.goalsFor}</span><span>{r.goalsAgainst}</span><span>{r.goalDifference>0?'+':''}{r.goalDifference}</span><strong>{r.points}</strong></div>)}</div>}
-function Rankings({t}:any){return <PageReveal className="page"><PageHead kicker="LIVE INTELLIGENCE" title="Tournament rankings" text="Live standings updated from every confirmed match result."/>{t.state.teams.length?<RankingTable rows={t.allStandings}/>:<Empty icon={<BarChart3/>} title="The table is waiting" text="Registered teams will appear here before the first whistle."/>}</PageReveal>}
+  useLayoutEffect(() => {
+    const context = gsap.context(
+      () => gsap.from('[data-reveal]', { y: 24, opacity: 0, duration: 0.7, stagger: 0.08, ease: 'power3.out' }),
+      ref,
+    )
+    return () => context.revert()
+  }, [])
 
-function TeamGrid({t,manage=false}:{t:any;manage?:boolean}){return <div className="team-grid">{t.state.teams.map((team:Team,i:number)=><article className="team-card" data-reveal key={team.id}><span className="seed">{String(i+1).padStart(2,'0')}</span><Logo team={team}/><div><h3>{team.name}</h3><Stars count={t.stars[team.name.toLowerCase()]}/><p>{t.stars[team.name.toLowerCase()]||0}× champion</p></div>{manage&&t.state.status==='registration'&&<button className="icon danger" aria-label={`Delete ${team.name}`} onClick={()=>t.deleteTeam(team.id)}><X/></button>}</article>)}</div>}
-function Teams({t}:any){return <PageReveal className="page"><PageHead kicker="GLOBAL CONTENDERS" title="Registered teams" text={`${t.state.teams.length} teams are ready to compete in Tournament #${String(t.state.tournamentNumber).padStart(2,'0')}.`}/>{t.state.teams.length?<TeamGrid t={t}/>:<Empty icon={<Users/>} title="No contenders yet" text="Teams will appear here once an administrator registers them."/>}</PageReveal>}
+  return <div ref={ref} className={className}>{children}</div>
+}
 
-function GroupCard({group,t}:{group:Group;t:any}){const rows=standings(t.state.teams,t.state.matches.filter((m:Match)=>m.groupId===group.id),group.teamIds);return <article className="group-card" data-reveal><header><span>{group.name}</span><small>{group.teamIds.length} TEAMS</small></header><div className="mini-head"><span>Team</span><span>P</span><span>GD</span><span>Pts</span></div>{rows.map(r=><div className="mini-row" key={r.id}><span className="club"><Logo team={r} small/><strong>{r.name}</strong></span><span>{r.played}</span><span>{r.goalDifference}</span><b>{r.points}</b></div>)}</article>}
-function Groups({t}:any){return <PageReveal className="page"><PageHead kicker="THE DRAW" title="Tournament groups" text="Balanced groups, randomized fairly and ranked live."/>{t.state.groups.length?<div className="groups-grid">{t.state.groups.map((g:Group)=><GroupCard key={g.id} group={g} t={t}/>)}</div>:<Empty icon={<LayoutGrid/>} title="Draw not completed" text="Groups will be revealed here when the administrator starts the tournament."/>}</PageReveal>}
+function Navigation() {
+  const [open, setOpen] = useState(false)
+  const links = [
+    ['/', 'Home'],
+    ['/rankings', 'Rankings'],
+    ['/teams', 'Teams'],
+    ['/groups', 'Groups'],
+    ['/matches', 'Matches'],
+    ['/knockout', 'Knockout'],
+    ['/history', 'History'],
+  ]
 
-function Matches({t,admin}:{t:any;admin:boolean}){const byId=Object.fromEntries(t.state.teams.map((x:Team)=>[x.id,x]));return <div className="matches-list">{t.state.matches.length?t.state.matches.map((m:Match)=>{const h=byId[m.homeId],a=byId[m.awayId];return <article className="match-card" key={m.id}><span className="match-group">{t.state.groups.find((g:Group)=>g.id===m.groupId)?.name}</span><div className="match-team"><Logo team={h} small/><strong>{h?.name}</strong></div>{admin?<div className="score-edit"><input aria-label={`${h?.name} score`} type="number" min="0" value={m.homeScore??''} onChange={e=>t.score(m.id,e.target.value===''?null:Number(e.target.value),m.awayScore)}/><i>—</i><input aria-label={`${a?.name} score`} type="number" min="0" value={m.awayScore??''} onChange={e=>t.score(m.id,m.homeScore,e.target.value===''?null:Number(e.target.value))}/></div>:<strong className="score">{m.homeScore??'–'} <i>:</i> {m.awayScore??'–'}</strong>}<div className="match-team away"><strong>{a?.name}</strong><Logo team={a} small/></div></article>}):<Empty icon={<CalendarDays/>} title="No fixtures yet" text="Fixtures are generated automatically with the group draw."/>}</div>}
-function MatchesPage({t}:any){return <PageReveal className="page"><PageHead kicker="MATCH CENTRE" title="Fixtures & results" text="Every group-stage contest in one live match feed."/><Matches t={t} admin={false}/></PageReveal>}
+  return (
+    <header className="nav">
+      <NavLink className="brand" to="/">
+        <span><Trophy /></span>
+        <strong>EFC</strong>
+        <small>WORLD SERIES</small>
+      </NavLink>
+      <button className="menu" type="button" onClick={() => setOpen(!open)} aria-label="Toggle menu">
+        <Menu />
+      </button>
+      <nav className={open ? 'open' : ''}>
+        {links.map(([to, label]) => (
+          <NavLink key={to} to={to} onClick={() => setOpen(false)}>{label}</NavLink>
+        ))}
+      </nav>
+      <div className="live-pill"><i /> LIVE SYSTEM</div>
+    </header>
+  )
+}
 
-function History({t}:any){return <PageReveal className="page"><PageHead kicker="HALL OF CHAMPIONS" title="Tournament history" text="Every title. Every champion. One growing legacy."/><div className="history-list">{[...t.state.history].reverse().map((h:any,i:number)=><article data-reveal className={i===0?'current':''} key={h.id}><span>#{String(h.tournamentNumber).padStart(2,'0')}</span><div><small>CHAMPION</small><h2>{h.winnerName} <Stars count={t.stars[h.winnerName.toLowerCase()]}/></h2></div><Crown/></article>)}</div></PageReveal>}
+function App() {
+  const auth = useSupabaseAuth()
+  const canEdit = Boolean(auth.isConfigured && auth.session && auth.isAdmin)
+  const tournament = useTournament(canEdit, auth.session?.user?.id)
 
-function AddTeamModal({close,add}:{close:()=>void;add:(n:string,u:string)=>void}){const [name,setName]=useState(''),[url,setUrl]=useState('');const ref=useRef(null);useLayoutEffect(()=>{gsap.from(ref.current,{opacity:0,scale:.92,duration:.3})},[]);const submit=(e:FormEvent)=>{e.preventDefault();if(!name.trim()||!url.trim())return;try{new URL(url)}catch{return}add(name,url);close()};return <div className="modal-backdrop" role="presentation" onMouseDown={e=>e.target===e.currentTarget&&close()}><form ref={ref} className="modal" onSubmit={submit}><header><div><small>TEAM REGISTRY</small><h2>Add contender</h2></div><button type="button" className="icon" onClick={close}><X/></button></header><div className="image-preview"><Logo team={{id:'',name:name||'New team',imageUrl:url,createdAt:''}}/></div><label>Team name<input autoFocus required value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. England"/></label><label>Logo image URL<input required type="url" value={url} onChange={e=>setUrl(e.target.value)} placeholder="https://example.com/team.png"/></label><footer><button type="button" className="button ghost" onClick={close}>Cancel</button><button className="button primary">Add team</button></footer></form></div>}
+  return (
+    <>
+      <Navigation />
+      <Routes>
+        <Route path="/" element={<Home t={tournament} />} />
+        <Route path="/rankings" element={<Rankings t={tournament} />} />
+        <Route path="/teams" element={<Teams t={tournament} />} />
+        <Route path="/groups" element={<Groups t={tournament} />} />
+        <Route path="/matches" element={<MatchesPage t={tournament} />} />
+        <Route path="/knockout" element={<KnockoutPage t={tournament} />} />
+        <Route path="/history" element={<History t={tournament} />} />
+        <Route path="/admin" element={<Admin auth={auth} t={tournament} />} />
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+      {tournament.message && (
+        <div className="toast" role="status" aria-live="polite"><Check /> {tournament.message}</div>
+      )}
+    </>
+  )
+}
 
-function DrawOverlay({state,done}:{state:any;done:()=>void}){const ref=useRef(null);const [counter,setCounter]=useState(0);useLayoutEffect(()=>{const ticker=setInterval(()=>setCounter(v=>v+1),120);const ctx=gsap.context(()=>{const tl=gsap.timeline({onComplete:()=>{clearInterval(ticker);done()}});tl.from('.draw-title',{scale:.7,opacity:0,duration:.8}).to('.draw-scan',{x:'200vw',duration:2,ease:'none'},0).from('.draw-group',{y:80,opacity:0,stagger:.25,duration:1},1).to('.shuffle-name',{opacity:.25,yoyo:true,repeat:10,duration:.22},1.5).to('.draw-title',{textContent:'GROUPS CONFIRMED',color:'#49e7ff',duration:.3},8.8).to('.draw-content',{scale:1.04,duration:.5},9).to(ref.current,{opacity:0,duration:.6},9.4)},ref);return()=>{clearInterval(ticker);ctx.revert()}},[]);return <div className="draw-overlay" ref={ref}><div className="draw-scan"/><div className="draw-content"><p>OFFICIAL RANDOM DRAW · SEQUENCE {String(counter).padStart(3,'0')}</p><h1 className="draw-title">DRAWING GROUPS</h1><div className="draw-grid">{state.groups.map((g:Group)=><div className="draw-group" key={g.id}><strong>{g.name}</strong>{g.teamIds.map(id=>{const team=state.teams.find((x:Team)=>x.id===id);return <span className="shuffle-name" key={id}><Logo team={team} small/>{team?.name}</span>})}</div>)}</div></div></div>}
+function Home({ t }: any) {
+  const { state, stars, allStandings } = t
+  const champion = state.history.at(-1)
+  const hero = useRef<HTMLElement>(null)
 
-function Admin({auth,t}:any){const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[show,setShow]=useState(false),[modal,setModal]=useState(false),[drawing,setDrawing]=useState(false),[err,setErr]=useState('');const login=async(e:FormEvent)=>{e.preventDefault();setErr('');try{await auth.signIn(email,password)}catch(x:any){setErr(x.message)}};if(!auth.isConfigured)return <div className="page"><PageHead kicker="SECURE ACCESS" title="Backend setup required" text="Add your Supabase URL and anonymous key to .env.local, then create an administrator using supabase/schema.sql."/></div>;if(!auth.session)return <main className="admin-login"><form onSubmit={login}><div className="lock"><LockKeyhole/></div><p className="eyebrow">RESTRICTED SYSTEM</p><h1>Control centre</h1><p>Authorized tournament personnel only.</p><label>Admin email<input type="email" required value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Password<div className="password"><input type={show?'text':'password'} required value={password} onChange={e=>setPassword(e.target.value)}/><button type="button" onClick={()=>setShow(!show)}>{show?<EyeOff/>:<Eye/>}</button></div></label>{err&&<p className="error">{err}</p>}<button className="button primary">Enter admin panel</button></form></main>;if(!auth.isAdmin)return <div className="page"><Empty icon={<Shield/>} title="Access denied" text="This account is authenticated but is not registered as a tournament administrator."/></div>;const completed=t.state.matches.filter((m:Match)=>m.homeScore!==null&&m.awayScore!==null).length;const startDraw=()=>{t.draw();if(t.state.teams.length>=4)setDrawing(true)};return <main className="admin-page"><aside><div className="admin-brand"><Shield/><div><strong>EFC CONTROL</strong><small>ADMIN CONSOLE</small></div></div><nav><a href="#overview"><BarChart3/> Overview</a><a href="#teams"><Users/> Teams</a><a href="#matches"><CalendarDays/> Matches</a><a href="#history"><Crown/> History</a></nav><button onClick={auth.signOut}><LogOut/> Sign out</button></aside><div className="admin-content"><header><div><p className="eyebrow">TOURNAMENT OPERATIONS</p><h1>Control centre</h1></div><span className="sync"><i/>{t.syncing?'SYNCING':'SYSTEM ONLINE'}</span></header><section id="overview" className="admin-stats"><article><small>Tournament</small><strong>#{String(t.state.tournamentNumber).padStart(2,'0')}</strong></article><article><small>Total teams</small><strong>{t.state.teams.length}</strong></article><article><small>Matches played</small><strong>{completed}/{t.state.matches.length}</strong></article><article><small>Current stage</small><strong>{t.state.stage}</strong></article></section><section className="control-section"><div className="section-head"><div><p className="eyebrow">TOURNAMENT FLOW</p><h2>Competition controls</h2></div><div className="actions">{t.state.status==='registration'&&<button className="button primary" onClick={startDraw}><Sparkles/> Start tournament</button>}{t.state.status==='groups'&&<button className="button ghost" onClick={t.regenerate}>Regenerate groups</button>}{t.state.status==='completed'&&<button className="button primary" onClick={t.nextTournament}>Start next tournament</button>}</div></div>{t.state.status==='groups'&&<div className="winner-control"><label>Declare tournament champion<select defaultValue="" onChange={e=>e.target.value&&t.complete(e.target.value)}><option value="">Select final winner…</option>{t.state.teams.map((x:Team)=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label></div>}</section><section id="teams" className="control-section"><div className="section-head"><div><p className="eyebrow">ROSTER</p><h2>Team management</h2></div>{t.state.status==='registration'&&<button className="button primary" onClick={()=>setModal(true)}><Plus/> Add team</button>}</div><TeamGrid t={t} manage/></section><section id="matches" className="control-section"><div className="section-head"><div><p className="eyebrow">MATCH OPERATIONS</p><h2>Score desk</h2></div></div><Matches t={t} admin/></section></div>{modal&&<AddTeamModal close={()=>setModal(false)} add={t.addTeam}/>} {drawing&&<DrawOverlay state={t.state} done={()=>setDrawing(false)}/>}</main>}
+  useLayoutEffect(() => {
+    const context = gsap.context(() => {
+      const timeline = gsap.timeline()
+      timeline
+        .from('.eyebrow,.hero h1,.hero-copy', { y: 40, opacity: 0, stagger: 0.12, duration: 0.8 })
+        .from('.cup-wrap', { scale: 0.6, opacity: 0, rotation: 8, duration: 1.1, ease: 'back.out(1.4)' }, '-=.5')
+        .from('.metric', { y: 20, opacity: 0, stagger: 0.1 }, '-=.4')
+    }, hero)
+    return () => context.revert()
+  }, [])
+
+  return (
+    <main ref={hero}>
+      <section className="hero">
+        <div>
+          <p className="eyebrow"><span /> THE DIGITAL PITCH AWAITS</p>
+          <h1>eFOOTBALL<br /><em>CHAMPIONSHIP</em></h1>
+          <p className="hero-copy">Elite competitors. One digital arena. Every goal writes history.</p>
+          <div className="actions">
+            <NavLink className="button primary" to="/rankings">Live ranking <ChevronRight /></NavLink>
+            <NavLink className="button ghost" to="/knockout">View bracket</NavLink>
+          </div>
+        </div>
+        <div className="cup-wrap">
+          <div className="orbit one" />
+          <div className="orbit two" />
+          <img src={`${import.meta.env.BASE_URL}efootball-cup.png`} alt="Championship trophy" />
+          <div className="cup-label">
+            SEASON {String(state.tournamentNumber).padStart(2, '0')}
+            <strong>{state.status === 'completed' ? 'COMPLETE' : state.stage.toUpperCase()}</strong>
+          </div>
+        </div>
+      </section>
+      <section className="metric-strip">
+        <div className="metric"><small>Current tournament</small><strong>#{String(state.tournamentNumber).padStart(2, '0')}</strong></div>
+        <div className="metric"><small>Status</small><strong className="cyan">{state.status.toUpperCase()}</strong></div>
+        <div className="metric"><small>Contenders</small><strong>{state.teams.length}</strong></div>
+        <div className="metric"><small>Current leader</small><strong>{allStandings[0]?.name || 'TBD'}</strong></div>
+      </section>
+      <section className="section">
+        <div className="section-head">
+          <div><p className="eyebrow">LEGACY ARCHIVE</p><h2>Champions of the arena</h2></div>
+          <NavLink to="/history">View full history <ChevronRight /></NavLink>
+        </div>
+        <div className="champion-preview">
+          {state.history.slice(-5).reverse().map((item: any, index: number) => (
+            <article key={item.id} className={index === 0 ? 'featured' : ''}>
+              <span>TOURNAMENT {String(item.tournamentNumber).padStart(2, '0')}</span>
+              <Crown />
+              <h3>{item.winnerName}</h3>
+              <Stars count={stars[item.winnerName.toLowerCase()]} />
+            </article>
+          ))}
+        </div>
+        {champion && <p className="broadcast"><i /> Reigning champion: <strong>{champion.winnerName}</strong></p>}
+      </section>
+    </main>
+  )
+}
+
+function PageHead({ kicker, title, text }: { kicker: string; title: string; text: string }) {
+  return <div className="page-head" data-reveal><p className="eyebrow">{kicker}</p><h1>{title}</h1><p>{text}</p></div>
+}
+
+function Empty({ icon, title, text }: { icon: ReactNode; title: string; text: string }) {
+  return <div className="empty">{icon}<h2>{title}</h2><p>{text}</p></div>
+}
+
+function RankingTable({ rows }: { rows: Standing[] }) {
+  const ref = useRef<HTMLDivElement>(null)
+
+  useLayoutEffect(() => {
+    const context = gsap.context(
+      () => gsap.from('.standing-row', { x: -28, opacity: 0, stagger: 0.06, duration: 0.55, ease: 'power2.out' }),
+      ref,
+    )
+    return () => context.revert()
+  }, [rows.length])
+
+  return (
+    <div className="table-wrap" ref={ref}>
+      <div className="standing-row table-head"><span>#</span><span>Club</span><span>P</span><span>W</span><span>D</span><span>L</span><span>GF</span><span>GA</span><span>GD</span><span>PTS</span></div>
+      {rows.map((row) => (
+        <div className={`standing-row rank-${row.position}`} key={row.id}>
+          <b>{String(row.position).padStart(2, '0')}</b>
+          <span className="club"><Logo team={row} small /><strong>{row.name}</strong></span>
+          <span>{row.played}</span><span>{row.wins}</span><span>{row.draws}</span><span>{row.losses}</span>
+          <span>{row.goalsFor}</span><span>{row.goalsAgainst}</span>
+          <span>{row.goalDifference > 0 ? '+' : ''}{row.goalDifference}</span>
+          <strong>{row.points}</strong>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function Rankings({ t }: any) {
+  return (
+    <PageReveal className="page">
+      <PageHead kicker="LIVE INTELLIGENCE" title="Tournament rankings" text="Live standings updated from every confirmed group-stage result." />
+      {t.state.teams.length
+        ? <RankingTable rows={t.allStandings} />
+        : <Empty icon={<BarChart3 />} title="The table is waiting" text="Registered teams will appear here before the first whistle." />}
+    </PageReveal>
+  )
+}
+
+function TeamGrid({ t, manage = false }: { t: any; manage?: boolean }) {
+  return (
+    <div className="team-grid">
+      {t.state.teams.map((team: Team, index: number) => (
+        <article className="team-card" data-reveal key={team.id}>
+          <span className="seed">{String(index + 1).padStart(2, '0')}</span>
+          <Logo team={team} />
+          <div>
+            <h3>{team.name}</h3>
+            <Stars count={t.stars[team.name.toLowerCase()]} />
+            <p>{t.stars[team.name.toLowerCase()] || 0}× champion</p>
+          </div>
+          {manage && t.state.status === 'registration' && (
+            <button className="icon danger" type="button" aria-label={`Delete ${team.name}`} onClick={() => t.deleteTeam(team.id)}><X /></button>
+          )}
+        </article>
+      ))}
+    </div>
+  )
+}
+
+function Teams({ t }: any) {
+  return (
+    <PageReveal className="page">
+      <PageHead kicker="GLOBAL CONTENDERS" title="Registered teams" text={`${t.state.teams.length} teams are ready to compete in Tournament #${String(t.state.tournamentNumber).padStart(2, '0')}.`} />
+      {t.state.teams.length
+        ? <TeamGrid t={t} />
+        : <Empty icon={<Users />} title="No contenders yet" text="Teams will appear here once an administrator registers them." />}
+    </PageReveal>
+  )
+}
+
+function GroupCard({ group, t }: { group: Group; t: any }) {
+  const rows = standings(
+    t.state.teams,
+    t.state.matches.filter((match: Match) => match.groupId === group.id),
+    group.teamIds,
+  )
+
+  return (
+    <article className="group-card" data-reveal>
+      <header><span>{group.name}</span><small>{group.teamIds.length} TEAMS</small></header>
+      <div className="mini-head"><span>Team</span><span>P</span><span>GD</span><span>Pts</span></div>
+      {rows.map((row) => (
+        <div className="mini-row" key={row.id}>
+          <span className="club"><Logo team={row} small /><strong>{row.name}</strong></span>
+          <span>{row.played}</span><span>{row.goalDifference}</span><b>{row.points}</b>
+        </div>
+      ))}
+    </article>
+  )
+}
+
+function Groups({ t }: any) {
+  return (
+    <PageReveal className="page">
+      <PageHead kicker="THE DRAW" title="Tournament groups" text="Balanced groups, securely randomized and ranked live." />
+      {t.state.groups.length
+        ? <div className="groups-grid">{t.state.groups.map((group: Group) => <GroupCard key={group.id} group={group} t={t} />)}</div>
+        : <Empty icon={<LayoutGrid />} title="Draw not completed" text="Groups will be revealed here when the administrator starts the tournament." />}
+    </PageReveal>
+  )
+}
+
+function GroupMatches({ t, admin }: { t: any; admin: boolean }) {
+  const teamsById = Object.fromEntries(t.state.teams.map((team: Team) => [team.id, team])) as Record<string, Team>
+  const scoresLocked = !t.hydrated || t.state.status !== 'groups'
+
+  if (!t.state.matches.length) {
+    return <Empty icon={<CalendarDays />} title="No fixtures yet" text="Fixtures are generated automatically with the group draw." />
+  }
+
+  return (
+    <div className="matches-list">
+      {t.state.matches.map((match: Match) => {
+        const home = teamsById[match.homeId]
+        const away = teamsById[match.awayId]
+        return (
+          <article className="match-card" key={match.id}>
+            <span className="match-group">{t.state.groups.find((group: Group) => group.id === match.groupId)?.name}</span>
+            <div className="match-team"><Logo team={home} small /><strong>{home?.name}</strong></div>
+            {admin ? (
+              <div className="score-edit">
+                <input
+                  aria-label={`${home?.name} score`}
+                  type="number"
+                  min="0"
+                  max="99"
+                  disabled={scoresLocked}
+                  value={match.homeScore ?? ''}
+                  onChange={(event) => t.score(match.id, event.target.value === '' ? null : Number(event.target.value), match.awayScore)}
+                />
+                <i>—</i>
+                <input
+                  aria-label={`${away?.name} score`}
+                  type="number"
+                  min="0"
+                  max="99"
+                  disabled={scoresLocked}
+                  value={match.awayScore ?? ''}
+                  onChange={(event) => t.score(match.id, match.homeScore, event.target.value === '' ? null : Number(event.target.value))}
+                />
+              </div>
+            ) : (
+              <strong className="score">{match.homeScore ?? '–'} <i>:</i> {match.awayScore ?? '–'}</strong>
+            )}
+            <div className="match-team away"><strong>{away?.name}</strong><Logo team={away} small /></div>
+          </article>
+        )
+      })}
+    </div>
+  )
+}
+
+function MatchesPage({ t }: any) {
+  return (
+    <PageReveal className="page">
+      <PageHead kicker="MATCH CENTRE" title="Group fixtures & results" text="Every group-stage contest in one live match feed." />
+      <GroupMatches t={t} admin={false} />
+    </PageReveal>
+  )
+}
+
+function roundName(round: number | null) {
+  if (round === 2) return 'Final'
+  if (round === 4) return 'Semi Finals'
+  if (round === 8) return 'Quarter Finals'
+  return round ? `Round of ${round}` : 'Knockout'
+}
+
+function scoreValue(value: string) {
+  return value === '' ? null : Number(value)
+}
+
+function KnockoutMatchCard({ match, t, admin }: { match: KnockoutMatch; t: any; admin: boolean }) {
+  const teamsById = Object.fromEntries(t.state.teams.map((team: Team) => [team.id, team])) as Record<string, Team>
+  const home = match.homeId ? teamsById[match.homeId] : undefined
+  const away = match.awayId ? teamsById[match.awayId] : undefined
+  const isBye = !match.homeId || !match.awayId
+  const editable = admin && t.hydrated && t.state.status === 'knockout' && t.activeKnockoutRound === match.round && !isBye
+  const needsPenalties = match.homeScore !== null && match.awayScore !== null && match.homeScore === match.awayScore
+  const winner = match.winnerId ? teamsById[match.winnerId] : undefined
+
+  const update = (field: keyof Pick<KnockoutMatch, 'homeScore' | 'awayScore' | 'homePenaltyScore' | 'awayPenaltyScore'>, value: string) => {
+    const next = {
+      homeScore: match.homeScore,
+      awayScore: match.awayScore,
+      homePenaltyScore: match.homePenaltyScore,
+      awayPenaltyScore: match.awayPenaltyScore,
+      [field]: scoreValue(value),
+    }
+    t.knockoutScore(match.id, next.homeScore, next.awayScore, next.homePenaltyScore, next.awayPenaltyScore)
+  }
+
+  return (
+    <article className={`match-card knockout-match ${winner ? 'decided' : ''}`}>
+      <span className="match-group">Match {match.order}</span>
+      <div className={`match-team ${winner?.id === home?.id ? 'winner' : ''}`}>
+        <Logo team={home} small />
+        <strong>{home?.name || 'BYE'}</strong>
+      </div>
+      {admin && !isBye ? (
+        <div className="score-edit">
+          <input aria-label={`${home?.name} score`} type="number" min="0" max="99" disabled={!editable} value={match.homeScore ?? ''} onChange={(event) => update('homeScore', event.target.value)} />
+          <i>—</i>
+          <input aria-label={`${away?.name} score`} type="number" min="0" max="99" disabled={!editable} value={match.awayScore ?? ''} onChange={(event) => update('awayScore', event.target.value)} />
+        </div>
+      ) : isBye ? (
+        <strong className="score bye-label">BYE</strong>
+      ) : (
+        <strong className="score">{match.homeScore ?? '–'} <i>:</i> {match.awayScore ?? '–'}</strong>
+      )}
+      <div className={`match-team away ${winner?.id === away?.id ? 'winner' : ''}`}>
+        <strong>{away?.name || 'BYE'}</strong>
+        <Logo team={away} small />
+      </div>
+      {needsPenalties && !isBye && (
+        <div className="penalty-row">
+          <span>Penalty shoot-out</span>
+          {admin ? (
+            <div className="score-edit">
+              <input aria-label={`${home?.name} penalty score`} type="number" min="0" max="99" disabled={!editable} value={match.homePenaltyScore ?? ''} onChange={(event) => update('homePenaltyScore', event.target.value)} />
+              <i>—</i>
+              <input aria-label={`${away?.name} penalty score`} type="number" min="0" max="99" disabled={!editable} value={match.awayPenaltyScore ?? ''} onChange={(event) => update('awayPenaltyScore', event.target.value)} />
+            </div>
+          ) : (
+            <strong>{match.homePenaltyScore ?? '–'} : {match.awayPenaltyScore ?? '–'}</strong>
+          )}
+        </div>
+      )}
+      {winner && <div className="winner-chip"><Check /> {match.round === 2 ? `${winner.name} wins the final` : `${winner.name} advances`}</div>}
+    </article>
+  )
+}
+
+function KnockoutMatches({ t, admin }: { t: any; admin: boolean }) {
+  if (!t.state.knockoutMatches.length) {
+    return <Empty icon={<GitBranch />} title="Bracket locked" text="Complete every group match before the knockout bracket can begin." />
+  }
+
+  const currentRound = t.state.status === 'knockout' ? t.activeKnockoutRound : null
+  const rounds = [...new Set<number>(
+    t.state.knockoutMatches.map((match: KnockoutMatch) => match.round),
+  )].sort((a, b) => b - a)
+
+  return (
+    <div className="knockout-rounds">
+      {rounds.map((round) => (
+        <section className={`knockout-round ${currentRound === round ? 'active' : ''}`} key={round} data-reveal>
+          <header><span>{roundName(round)}</span><small>{currentRound === round ? 'CURRENT ROUND' : 'BRACKET'}</small></header>
+          <div className="matches-list">
+            {t.state.knockoutMatches
+              .filter((match: KnockoutMatch) => match.round === round)
+              .sort((a: KnockoutMatch, b: KnockoutMatch) => a.order - b.order)
+              .map((match: KnockoutMatch) => <KnockoutMatchCard key={match.id} match={match} t={t} admin={admin} />)}
+          </div>
+        </section>
+      ))}
+    </div>
+  )
+}
+
+function KnockoutPage({ t }: any) {
+  return (
+    <PageReveal className="page">
+      <PageHead kicker="ROAD TO GLORY" title="Knockout bracket" text="Qualifiers advance round by round. Drawn matches are decided by penalties." />
+      <KnockoutMatches t={t} admin={false} />
+    </PageReveal>
+  )
+}
+
+function History({ t }: any) {
+  return (
+    <PageReveal className="page">
+      <PageHead kicker="HALL OF CHAMPIONS" title="Tournament history" text="Every title. Every champion. One growing legacy." />
+      <div className="history-list">
+        {[...t.state.history].reverse().map((item: any, index: number) => (
+          <article data-reveal className={index === 0 ? 'current' : ''} key={item.id}>
+            <span>#{String(item.tournamentNumber).padStart(2, '0')}</span>
+            <div><small>CHAMPION</small><h2>{item.winnerName} <Stars count={t.stars[item.winnerName.toLowerCase()]} /></h2></div>
+            <Crown />
+          </article>
+        ))}
+      </div>
+    </PageReveal>
+  )
+}
+
+function normalizeImageUrl(rawUrl: string) {
+  const trimmed = rawUrl.trim()
+  const candidate = /^[a-z][a-z\d+.-]*:/i.test(trimmed) ? trimmed : `https://${trimmed}`
+  const parsed = new URL(candidate)
+  if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('Use a valid http:// or https:// image link.')
+  return parsed.toString()
+}
+
+function AddTeamModal({ close, add }: { close: () => void; add: (name: string, imageUrl: string) => boolean }) {
+  const [name, setName] = useState('')
+  const [url, setUrl] = useState('')
+  const [error, setError] = useState('')
+  const ref = useRef<HTMLFormElement>(null)
+
+  useLayoutEffect(() => {
+    gsap.from(ref.current, { opacity: 0, scale: 0.92, duration: 0.3 })
+  }, [])
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault()
+    setError('')
+    if (!name.trim() || !url.trim()) {
+      setError('Team name and logo URL are required.')
+      return
+    }
+
+    try {
+      const accepted = add(name.trim(), normalizeImageUrl(url))
+      if (accepted) close()
+      else setError('The team was not added. Check the message and try again.')
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Enter a valid logo image URL.')
+    }
+  }
+
+  return (
+    <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && close()}>
+      <form ref={ref} className="modal" onSubmit={submit}>
+        <header>
+          <div><small>TEAM REGISTRY</small><h2>Add contender</h2></div>
+          <button type="button" className="icon" onClick={close} aria-label="Close add team form"><X /></button>
+        </header>
+        <div className="image-preview"><Logo team={{ id: '', name: name || 'New team', imageUrl: url, createdAt: '' }} /></div>
+        <label>Team name<input autoFocus required value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. England" /></label>
+        <label>Logo image URL<input required type="text" inputMode="url" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://example.com/team.png" /></label>
+        {error && <p className="form-error" role="alert"><CircleAlert /> {error}</p>}
+        <footer>
+          <button type="button" className="button ghost" onClick={close}>Cancel</button>
+          <button type="submit" className="button primary">Add team</button>
+        </footer>
+      </form>
+    </div>
+  )
+}
+
+function DrawOverlay({ state, done }: { state: any; done: () => void }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const doneRef = useRef(done)
+  const [counter, setCounter] = useState(0)
+  doneRef.current = done
+
+  useLayoutEffect(() => {
+    const ticker = window.setInterval(() => setCounter((value) => value + 1), 90)
+    const context = gsap.context(() => {
+      const timeline = gsap.timeline({ onComplete: () => { window.clearInterval(ticker); doneRef.current() } })
+      timeline
+        .from('.draw-title', { scale: 0.7, opacity: 0, duration: 0.55 })
+        .to('.draw-scan', { x: '200vw', duration: 1.4, ease: 'none' }, 0)
+        .from('.draw-group', { y: 60, opacity: 0, stagger: 0.15, duration: 0.65 }, 0.55)
+        .to('.shuffle-name', { opacity: 0.3, yoyo: true, repeat: 5, duration: 0.18 }, 1)
+        .to('.draw-title', { textContent: 'GROUPS CONFIRMED', color: '#49e7ff', duration: 0.2 }, 3.1)
+        .to(ref.current, { opacity: 0, duration: 0.45 }, 3.55)
+    }, ref)
+    return () => { window.clearInterval(ticker); context.revert() }
+  }, [])
+
+  return (
+    <div className="draw-overlay" ref={ref}>
+      <div className="draw-scan" />
+      <div className="draw-content">
+        <p>OFFICIAL RANDOM DRAW · SEQUENCE {String(counter).padStart(3, '0')}</p>
+        <h1 className="draw-title">DRAWING GROUPS</h1>
+        <div className="draw-grid">
+          {state.groups.map((group: Group) => (
+            <div className="draw-group" key={group.id}>
+              <strong>{group.name}</strong>
+              {group.teamIds.map((id) => {
+                const team = state.teams.find((item: Team) => item.id === id)
+                return <span className="shuffle-name" key={id}><Logo team={team} small />{team?.name}</span>
+              })}
+            </div>
+          ))}
+        </div>
+        <button type="button" className="draw-skip" onClick={() => doneRef.current()}>Skip animation</button>
+      </div>
+    </div>
+  )
+}
+
+function CompetitionControls({ t, onDraw, onRedraw, onNext }: { t: any; onDraw: () => void; onRedraw: () => void; onNext: () => void }) {
+  if (t.state.status === 'registration') {
+    const needed = Math.max(0, 4 - t.state.teams.length)
+    return (
+      <div className="flow-control">
+        <div className="flow-status"><strong>{needed ? `${needed} more team${needed === 1 ? '' : 's'} needed` : 'Roster ready'}</strong><span>At least four teams are required for a balanced tournament.</span></div>
+        <button className="button primary" type="button" disabled={needed > 0} onClick={onDraw}><Sparkles /> Start tournament</button>
+      </div>
+    )
+  }
+
+  if (t.state.status === 'groups') {
+    return (
+      <div className="flow-control">
+        <div className={`flow-status ${t.groupComplete ? 'ready' : ''}`}>
+          <strong>{t.groupComplete ? 'Group stage complete' : `${t.pendingMatches} group match${t.pendingMatches === 1 ? '' : 'es'} remaining`}</strong>
+          <span>{t.groupComplete ? 'The qualified teams can now enter the knockout bracket.' : 'Every score must be completed before knockout can start.'}</span>
+        </div>
+        <div className="actions">
+          <button className="button ghost" type="button" disabled={!t.canRegenerateGroups} onClick={onRedraw} title={t.canRegenerateGroups ? 'Create a fresh random draw' : 'Clear every score field before regenerating groups'}><RotateCcw /> Regenerate Groups</button>
+          <button className="button primary" type="button" disabled={!t.canStartKnockout} onClick={() => t.startKnockout()}><GitBranch /> Start knockout</button>
+        </div>
+      </div>
+    )
+  }
+
+  if (t.state.status === 'knockout') {
+    const isFinal = t.activeKnockoutRound === 2
+    return (
+      <div className="flow-control">
+        <div className={`flow-status ${t.canAdvanceKnockoutRound ? 'ready' : ''}`}>
+          <strong>{roundName(t.activeKnockoutRound)}</strong>
+          <span>{t.canAdvanceKnockoutRound ? (isFinal ? `${t.champion?.name || 'The winner'} is ready to be crowned.` : 'Every winner is decided. The next round is ready.') : `${t.pendingKnockoutMatches} knockout match${t.pendingKnockoutMatches === 1 ? '' : 'es'} still need a winner.`}</span>
+        </div>
+        <button className="button primary" type="button" disabled={!t.canAdvanceKnockoutRound} onClick={() => t.advanceKnockoutRound()}>
+          {isFinal ? <Crown /> : <ChevronRight />}{isFinal ? 'Confirm champion' : `Advance to ${roundName((t.activeKnockoutRound || 4) / 2)}`}
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flow-control">
+      <div className={`flow-status ${t.canStartNext ? 'ready' : 'warning'}`}>
+        <strong>{t.canStartNext ? `${t.champion?.name || 'Champion'} crowned` : 'Completion needs verification'}</strong>
+        <span>{t.canStartNext ? 'The final is recorded and this tournament is safely archived.' : 'A resolved final is required before another tournament can start.'}</span>
+      </div>
+      <button className="button primary" type="button" disabled={!t.canStartNext} onClick={onNext}><Trophy /> Start next tournament</button>
+    </div>
+  )
+}
+
+function Admin({ auth, t }: any) {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [show, setShow] = useState(false)
+  const [modal, setModal] = useState(false)
+  const [drawing, setDrawing] = useState(false)
+  const [error, setError] = useState('')
+
+  const login = async (event: FormEvent) => {
+    event.preventDefault()
+    setError('')
+    try { await auth.signIn(email, password) }
+    catch (caught: any) { setError(caught.message) }
+  }
+
+  if (!auth.isConfigured) {
+    return <div className="page"><PageHead kicker="SECURE ACCESS" title="Backend setup required" text="Add your Supabase URL and anonymous key to .env.local, then create an administrator using supabase/schema.sql." /></div>
+  }
+
+  if (!auth.session) {
+    return (
+      <main className="admin-login">
+        <form onSubmit={login}>
+          <div className="lock"><LockKeyhole /></div>
+          <p className="eyebrow">RESTRICTED SYSTEM</p>
+          <h1>Control centre</h1>
+          <p>Authorized tournament personnel only.</p>
+          <label>Admin email<input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} /></label>
+          <label>Password<div className="password"><input type={show ? 'text' : 'password'} required value={password} onChange={(event) => setPassword(event.target.value)} /><button type="button" onClick={() => setShow(!show)} aria-label={show ? 'Hide password' : 'Show password'}>{show ? <EyeOff /> : <Eye />}</button></div></label>
+          {error && <p className="error">{error}</p>}
+          <button className="button primary" type="submit">Enter admin panel</button>
+        </form>
+      </main>
+    )
+  }
+
+  if (!auth.isAdmin) {
+    return <div className="page"><Empty icon={<Shield />} title="Access denied" text="This account is authenticated but is not registered as a tournament administrator." /></div>
+  }
+
+  if (!t.hydrated) {
+    return <div className="page"><Empty icon={<Shield />} title="Loading live tournament" text="Tournament controls will unlock after the latest saved state is verified." /></div>
+  }
+
+  const startDraw = () => { if (t.draw()) setDrawing(true) }
+  const redraw = () => { if (t.regenerate()) setDrawing(true) }
+  const startNext = () => {
+    if (!t.canStartNext) return
+    const nextNumber = t.state.tournamentNumber + 1
+    if (!window.confirm(`Start Tournament #${String(nextNumber).padStart(2, '0')}? The champion is archived; current groups and match results will be cleared.`)) return
+    t.nextTournament(true)
+  }
+  const totalMatches = t.state.matches.length + t.state.knockoutMatches.length
+  const playedMatches = t.completedMatches + t.completedKnockoutMatches
+
+  return (
+    <main className="admin-page">
+      <aside>
+        <div className="admin-brand"><Shield /><div><strong>EFC CONTROL</strong><small>ADMIN CONSOLE</small></div></div>
+        <nav>
+          <a href="#overview"><BarChart3 /> Overview</a>
+          <a href="#teams"><Users /> Teams</a>
+          <a href="#matches"><CalendarDays /> Group matches</a>
+          <a href="#knockout"><GitBranch /> Knockout</a>
+          <NavLink to="/history"><Crown /> History</NavLink>
+        </nav>
+        <button type="button" onClick={auth.signOut}><LogOut /> Sign out</button>
+      </aside>
+      <div className="admin-content">
+        <header>
+          <div><p className="eyebrow">TOURNAMENT OPERATIONS</p><h1>Control centre</h1></div>
+          <div className="admin-header-tools">
+            <span className="sync"><i />{t.syncing ? 'SYNCING' : 'SYSTEM ONLINE'}</span>
+            <button className="mobile-signout" type="button" onClick={auth.signOut}><LogOut /> Sign out</button>
+          </div>
+        </header>
+        <section id="overview" className="admin-stats">
+          <article><small>Tournament</small><strong>#{String(t.state.tournamentNumber).padStart(2, '0')}</strong></article>
+          <article><small>Total teams</small><strong>{t.state.teams.length}</strong></article>
+          <article><small>Matches decided</small><strong>{playedMatches}/{totalMatches}</strong></article>
+          <article><small>Current stage</small><strong>{t.state.stage}</strong></article>
+        </section>
+        <section className="control-section">
+          <div className="section-head"><div><p className="eyebrow">TOURNAMENT FLOW</p><h2>Competition controls</h2></div></div>
+          <CompetitionControls t={t} onDraw={startDraw} onRedraw={redraw} onNext={startNext} />
+        </section>
+        <section id="teams" className="control-section">
+          <div className="section-head">
+            <div><p className="eyebrow">ROSTER</p><h2>Team management</h2></div>
+            {t.state.status === 'registration' && <button className="button primary" type="button" onClick={() => setModal(true)}><Plus /> Add team</button>}
+          </div>
+          <TeamGrid t={t} manage />
+        </section>
+        <section id="matches" className="control-section">
+          <div className="section-head"><div><p className="eyebrow">GROUP OPERATIONS</p><h2>Group score desk</h2></div></div>
+          <GroupMatches t={t} admin />
+        </section>
+        <section id="knockout" className="control-section">
+          <div className="section-head"><div><p className="eyebrow">KNOCKOUT OPERATIONS</p><h2>Road to the final</h2></div></div>
+          <KnockoutMatches t={t} admin />
+        </section>
+      </div>
+      {modal && <AddTeamModal close={() => setModal(false)} add={t.addTeam} />}
+      {drawing && <DrawOverlay state={t.state} done={() => setDrawing(false)} />}
+    </main>
+  )
+}
 
 export default App

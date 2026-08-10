@@ -11,7 +11,7 @@ const hostingDir = path.join(distDir, '.openai')
 await copyFile(path.join(distDir, 'index.html'), path.join(distDir, '404.html'))
 
 // Materialize public routes so direct links return HTTP 200 on static hosts.
-for (const route of ['admin', 'rankings', 'teams', 'groups', 'matches', 'history']) {
+for (const route of ['admin', 'rankings', 'teams', 'groups', 'matches', 'knockout', 'history']) {
   const routeDir = path.join(distDir, route)
   await mkdir(routeDir, { recursive: true })
   await copyFile(path.join(distDir, 'index.html'), path.join(routeDir, 'index.html'))

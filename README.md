@@ -1,25 +1,26 @@
 # E-Football Group Cup
 
-Live React tournament manager with unlimited teams, a randomized group draw, live group standings, knockout rounds, admin controls and screenshot/print-ready outputs.
+Live React tournament manager with unlimited teams, randomized groups, live standings, knockout rounds, a gated final and protected admin controls.
 
 ## Tournament flow
 
-1. Admin adds any number of teams with an image URL or upload.
-2. Admin selects the preferred group size and creates a random balanced draw.
+1. Admin adds any number of teams with a team name and logo URL.
+2. The app creates securely randomized, balanced groups of up to four teams. Groups can be regenerated while every score field is empty.
 3. Group scores update the live ranking automatically; the top two teams in each group qualify.
-4. The app creates a power-of-two knockout bracket and automatically supports byes when needed.
-5. Drawn knockout matches use penalties. Winners advance through separate rounds to the final.
-6. The Output route provides a clean share board that can be screenshotted, printed or saved as PDF.
+4. The knockout bracket stays locked until every group fixture is complete, then supports power-of-two rounds and byes.
+5. Drawn knockout matches require a penalty winner. Winners advance through separate rounds to the final.
+6. The next tournament remains locked until the final winner is confirmed and archived.
 
 ## Routes
 
-- `#/` Home
-- `#/teams` Teams and draw
-- `#/groups` Group stage
-- `#/knockout` Knockout stage
-- `#/ranking` Live ranking
-- `#/output` Share/print output
-- `#/admin` Protected tournament control room
+- `/` Home
+- `/rankings` Live ranking
+- `/teams` Registered teams
+- `/groups` Group stage
+- `/matches` Group fixtures and results
+- `/knockout` Knockout stage and final
+- `/history` Champion history
+- `/admin` Protected tournament control room
 
 ## Supabase
 
@@ -28,5 +29,6 @@ The existing Supabase database, realtime, authentication, RLS and team-image sto
 ```bash
 npm install
 npm run dev
+npm test
 npm run build
 ```
