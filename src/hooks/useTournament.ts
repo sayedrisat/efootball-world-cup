@@ -59,12 +59,14 @@ const knockoutStageName = (round: number | null) => {
 }
 
 type StateUpdate = (current: TournamentState) => TournamentState | null
+export type TournamentLiveStatus = 'connecting' | 'live' | 'local' | 'polling' | 'offline'
 
 export function useTournament(canEdit: boolean, userId?: string) {
   const [state, setState] = useState<TournamentState>(readLocal)
   const [message, setMessage] = useState('')
   const [syncing, setSyncing] = useState(isSupabaseConfigured)
   const [hydrated, setHydrated] = useState(!isSupabaseConfigured)
+  const [liveStatus, setLiveStatus] = useState<TournamentLiveStatus>(isSupabaseConfigured ? 'connecting' : 'local')
   const [saveRetry, setSaveRetry] = useState(0)
   const [migrationSignal, setMigrationSignal] = useState(0)
   const storedPendingVersion = useRef(readPendingVersion()).current
@@ -231,6 +233,8 @@ export function useTournament(canEdit: boolean, userId?: string) {
     if (!isSupabaseConfigured) return undefined
 
     let active = true
+    let realtimeConnected = false
+    let refreshTimer: number | null = null
     const applyRemote = (snapshot: RemoteStateSnapshot, allowFirstSnapshot = false) => {
       if (!active) return
       if (hydrationRetryTimerRef.current !== null) {
@@ -268,19 +272,59 @@ export function useTournament(canEdit: boolean, userId?: string) {
       if (!active || hydratedRef.current) return
       setSyncing(true)
       readRemoteState()
-        .then((incoming) => applyRemote(incoming, true))
+        .then((incoming) => {
+          applyRemote(incoming, true)
+          if (!realtimeConnected) setLiveStatus('polling')
+        })
         .catch((error) => {
           if (!active || hydratedRef.current) return
+          if (!realtimeConnected) setLiveStatus('offline')
           setMessage(error instanceof Error ? error.message : 'Could not load the live tournament.')
           hydrationRetryTimerRef.current = window.setTimeout(loadRemote, 2500)
         })
     }
 
+    const refreshRemote = () => {
+      if (!active || !hydratedRef.current) return
+      readRemoteState()
+        .then((incoming) => {
+          applyRemote(incoming)
+          if (!realtimeConnected) setLiveStatus('polling')
+        })
+        .catch(() => {
+          if (!realtimeConnected) setLiveStatus('offline')
+        })
+    }
+
+    const handleRealtimeStatus = (status: string) => {
+      if (!active) return
+      if (status === 'SUBSCRIBED') {
+        realtimeConnected = true
+        setLiveStatus('live')
+        return
+      }
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        realtimeConnected = false
+        setLiveStatus('polling')
+        refreshRemote()
+      }
+    }
+
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') refreshRemote()
+    }
+
     loadRemote()
 
-    const stop = subscribeRemote((incoming) => applyRemote(incoming, true))
+    const stop = subscribeRemote((incoming) => applyRemote(incoming, true), handleRealtimeStatus)
+    refreshTimer = window.setInterval(refreshRemote, 15000)
+    window.addEventListener('focus', refreshRemote)
+    document.addEventListener('visibilitychange', refreshWhenVisible)
     return () => {
       active = false
+      window.removeEventListener('focus', refreshRemote)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+      if (refreshTimer !== null) window.clearInterval(refreshTimer)
       if (hydrationRetryTimerRef.current !== null) {
         window.clearTimeout(hydrationRetryTimerRef.current)
         hydrationRetryTimerRef.current = null
@@ -704,6 +748,7 @@ export function useTournament(canEdit: boolean, userId?: string) {
     canStartNext,
     message,
     syncing,
+    liveStatus,
     setMessage,
     addTeam,
     editTeam,

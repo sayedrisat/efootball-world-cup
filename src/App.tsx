@@ -21,6 +21,7 @@ import {
   LayoutGrid,
   LockKeyhole,
   LogOut,
+  Maximize2,
   Menu,
   Plus,
   RotateCcw,
@@ -76,7 +77,15 @@ function PageReveal({ children, className = '' }: { children: ReactNode; classNa
   return <div ref={ref} className={className}>{children}</div>
 }
 
-function Navigation() {
+const liveLabels: Record<string, string> = {
+  connecting: 'CONNECTING',
+  live: 'LIVE',
+  local: 'LOCAL',
+  polling: 'UPDATING',
+  offline: 'OFFLINE',
+}
+
+function Navigation({ liveStatus }: { liveStatus: string }) {
   const [open, setOpen] = useState(false)
   const links = [
     ['/', 'Home'],
@@ -95,15 +104,24 @@ function Navigation() {
         <strong>EFC</strong>
         <small>WORLD SERIES</small>
       </NavLink>
-      <button className="menu" type="button" onClick={() => setOpen(!open)} aria-label="Toggle menu">
-        <Menu />
-      </button>
-      <nav className={open ? 'open' : ''}>
+      <nav id="primary-navigation" className={open ? 'open' : ''}>
         {links.map(([to, label]) => (
           <NavLink key={to} to={to} onClick={() => setOpen(false)}>{label}</NavLink>
         ))}
       </nav>
-      <div className="live-pill"><i /> LIVE SYSTEM</div>
+      <div className={`live-pill live-pill--${liveStatus}`} role="status" aria-live="polite">
+        <i /> <span>{liveLabels[liveStatus] || 'UPDATING'}</span>
+      </div>
+      <button
+        className="menu"
+        type="button"
+        onClick={() => setOpen(!open)}
+        aria-label={open ? 'Close menu' : 'Open menu'}
+        aria-expanded={open}
+        aria-controls="primary-navigation"
+      >
+        {open ? <X /> : <Menu />}
+      </button>
     </header>
   )
 }
@@ -115,7 +133,7 @@ function App() {
 
   return (
     <>
-      <Navigation />
+      <Navigation liveStatus={tournament.liveStatus} />
       <Routes>
         <Route path="/" element={<Home t={tournament} />} />
         <Route path="/rankings" element={<Rankings t={tournament} />} />
@@ -219,16 +237,16 @@ function RankingTable({ rows }: { rows: Standing[] }) {
   }, [rows.length])
 
   return (
-    <div className="table-wrap" ref={ref}>
-      <div className="standing-row table-head"><span>#</span><span>Club</span><span>P</span><span>W</span><span>D</span><span>L</span><span>GF</span><span>GA</span><span>GD</span><span>PTS</span></div>
+    <div className="table-wrap" ref={ref} role="table" aria-label="Live tournament rankings">
+      <div className="standing-row table-head" role="row"><span role="columnheader">#</span><span role="columnheader">Club</span><span role="columnheader">P</span><span className="standing-secondary" role="columnheader">W</span><span className="standing-secondary" role="columnheader">D</span><span className="standing-secondary" role="columnheader">L</span><span className="standing-secondary" role="columnheader">GF</span><span className="standing-secondary" role="columnheader">GA</span><span role="columnheader">GD</span><span role="columnheader">PTS</span></div>
       {rows.map((row) => (
-        <div className={`standing-row rank-${row.position}`} key={row.id}>
-          <b>{String(row.position).padStart(2, '0')}</b>
-          <span className="club"><Logo team={row} small /><strong>{row.name}</strong></span>
-          <span>{row.played}</span><span>{row.wins}</span><span>{row.draws}</span><span>{row.losses}</span>
-          <span>{row.goalsFor}</span><span>{row.goalsAgainst}</span>
-          <span>{row.goalDifference > 0 ? '+' : ''}{row.goalDifference}</span>
-          <strong>{row.points}</strong>
+        <div className={`standing-row rank-${row.position}`} key={row.id} role="row">
+          <b role="cell">{String(row.position).padStart(2, '0')}</b>
+          <span className="club" role="cell"><Logo team={row} small /><strong>{row.name}</strong></span>
+          <span role="cell">{row.played}</span><span className="standing-secondary" role="cell">{row.wins}</span><span className="standing-secondary" role="cell">{row.draws}</span><span className="standing-secondary" role="cell">{row.losses}</span>
+          <span className="standing-secondary" role="cell">{row.goalsFor}</span><span className="standing-secondary" role="cell">{row.goalsAgainst}</span>
+          <span role="cell">{row.goalDifference > 0 ? '+' : ''}{row.goalDifference}</span>
+          <strong role="cell">{row.points}</strong>
         </div>
       ))}
     </div>
@@ -248,7 +266,7 @@ function Rankings({ t }: any) {
 
 function TeamGrid({ t, manage = false }: { t: any; manage?: boolean }) {
   return (
-    <div className="team-grid">
+    <div className={`team-grid ${manage ? 'manage' : ''}`}>
       {t.state.teams.map((team: Team, index: number) => (
         <article className="team-card" data-reveal key={team.id}>
           <span className="seed">{String(index + 1).padStart(2, '0')}</span>
@@ -310,50 +328,97 @@ function Groups({ t }: any) {
   )
 }
 
-function GroupMatches({ t, admin }: { t: any; admin: boolean }) {
+type MatchFilter = 'all' | 'pending' | 'finished'
+
+const matchFilters: Array<{ label: string; value: MatchFilter }> = [
+  { label: 'All', value: 'all' },
+  { label: 'Upcoming', value: 'pending' },
+  { label: 'Finished', value: 'finished' },
+]
+
+const matchIsFinished = (match: Match) => match.homeScore !== null && match.awayScore !== null
+
+function GroupMatches({ t, admin, filter = 'all' }: { t: any; admin: boolean; filter?: MatchFilter }) {
   const teamsById = Object.fromEntries(t.state.teams.map((team: Team) => [team.id, team])) as Record<string, Team>
   const scoresLocked = !t.hydrated || t.state.status !== 'groups'
+  const visibleMatches = t.state.matches.filter((match: Match) => {
+    if (filter === 'pending') return !matchIsFinished(match)
+    if (filter === 'finished') return matchIsFinished(match)
+    return true
+  })
 
   if (!t.state.matches.length) {
     return <Empty icon={<CalendarDays />} title="No fixtures yet" text="Fixtures are generated automatically with the group draw." />
   }
 
+  if (!visibleMatches.length) {
+    return <Empty icon={<CalendarDays />} title={`No ${filter} matches`} text="Choose another match filter to see the fixture board." />
+  }
+
   return (
-    <div className="matches-list">
-      {t.state.matches.map((match: Match) => {
-        const home = teamsById[match.homeId]
-        const away = teamsById[match.awayId]
+    <div className={`fixture-board ${admin ? 'fixture-board--admin' : 'fixture-board--public'}`}>
+      {t.state.groups.map((group: Group) => {
+        const groupMatches = visibleMatches.filter((match: Match) => match.groupId === group.id)
+        if (!groupMatches.length) return null
+        const allGroupMatches = t.state.matches.filter((match: Match) => match.groupId === group.id)
+        const completed = allGroupMatches.filter(matchIsFinished).length
+
         return (
-          <article className="match-card" key={match.id}>
-            <span className="match-group">{t.state.groups.find((group: Group) => group.id === match.groupId)?.name}</span>
-            <div className="match-team"><Logo team={home} small /><strong>{home?.name}</strong></div>
-            {admin ? (
-              <div className="score-edit">
-                <input
-                  aria-label={`${home?.name} score`}
-                  type="number"
-                  min="0"
-                  max="99"
-                  disabled={scoresLocked}
-                  value={match.homeScore ?? ''}
-                  onChange={(event) => t.score(match.id, event.target.value === '' ? null : Number(event.target.value), match.awayScore)}
-                />
-                <i>—</i>
-                <input
-                  aria-label={`${away?.name} score`}
-                  type="number"
-                  min="0"
-                  max="99"
-                  disabled={scoresLocked}
-                  value={match.awayScore ?? ''}
-                  onChange={(event) => t.score(match.id, match.homeScore, event.target.value === '' ? null : Number(event.target.value))}
-                />
-              </div>
-            ) : (
-              <strong className="score">{match.homeScore ?? '–'} <i>:</i> {match.awayScore ?? '–'}</strong>
-            )}
-            <div className="match-team away"><strong>{away?.name}</strong><Logo team={away} small /></div>
-          </article>
+          <section className="fixture-group" key={group.id} data-reveal>
+            <header className="fixture-group-head">
+              <div><small>FIXTURE BOARD</small><strong>{group.name}</strong></div>
+              <span><b>{completed}</b> / {allGroupMatches.length} PLAYED</span>
+            </header>
+            <div className={`matches-list ${admin ? 'admin-match-list' : 'group-match-grid'}`}>
+              {groupMatches.map((match: Match, index: number) => {
+                const home = teamsById[match.homeId]
+                const away = teamsById[match.awayId]
+                const finished = matchIsFinished(match)
+                const matchNumber = allGroupMatches.findIndex((item: Match) => item.id === match.id) + 1
+
+                return (
+                  <article className={`match-card fixture-card ${admin ? 'admin-match' : 'public-match'} ${finished ? 'is-finished' : 'is-pending'}`} key={match.id}>
+                    <div className="match-meta">
+                      <span className="match-group">{group.name}</span>
+                      <span className="match-number">MATCH {String(matchNumber || index + 1).padStart(2, '0')}</span>
+                      <span className="match-state">{finished ? 'FT' : 'NEXT'}</span>
+                    </div>
+                    <div className="match-team"><Logo team={home} small /><strong>{home?.name}</strong></div>
+                    {admin ? (
+                      <div className="score-edit">
+                        <input
+                          aria-label={`${home?.name} score`}
+                          type="number"
+                          inputMode="numeric"
+                          min="0"
+                          max="99"
+                          disabled={scoresLocked}
+                          value={match.homeScore ?? ''}
+                          onChange={(event) => t.score(match.id, event.target.value === '' ? null : Number(event.target.value), match.awayScore)}
+                        />
+                        <i>—</i>
+                        <input
+                          aria-label={`${away?.name} score`}
+                          type="number"
+                          inputMode="numeric"
+                          min="0"
+                          max="99"
+                          disabled={scoresLocked}
+                          value={match.awayScore ?? ''}
+                          onChange={(event) => t.score(match.id, match.homeScore, event.target.value === '' ? null : Number(event.target.value))}
+                        />
+                      </div>
+                    ) : (
+                      <strong className="score" aria-label={finished ? `${home?.name} ${match.homeScore}, ${away?.name} ${match.awayScore}` : `${home?.name} versus ${away?.name}`}>
+                        {match.homeScore ?? '–'} <i>:</i> {match.awayScore ?? '–'}
+                      </strong>
+                    )}
+                    <div className="match-team away"><strong>{away?.name}</strong><Logo team={away} small /></div>
+                  </article>
+                )
+              })}
+            </div>
+          </section>
         )
       })}
     </div>
@@ -361,10 +426,53 @@ function GroupMatches({ t, admin }: { t: any; admin: boolean }) {
 }
 
 function MatchesPage({ t }: any) {
+  const [filter, setFilter] = useState<MatchFilter>('all')
+  const [captureMode, setCaptureMode] = useState(() => new URLSearchParams(window.location.search).get('view') === 'capture')
+  const finished = t.state.matches.filter(matchIsFinished).length
+  const pending = t.state.matches.length - finished
+
+  useEffect(() => {
+    document.body.classList.toggle('match-capture-active', captureMode)
+    if (captureMode) window.scrollTo(0, 0)
+    return () => document.body.classList.remove('match-capture-active')
+  }, [captureMode])
+
+  const filterCount = (value: MatchFilter) => {
+    if (value === 'finished') return finished
+    if (value === 'pending') return pending
+    return t.state.matches.length
+  }
+
   return (
-    <PageReveal className="page">
-      <PageHead kicker="MATCH CENTRE" title="Group fixtures & results" text="Every group-stage contest in one live match feed." />
-      <GroupMatches t={t} admin={false} />
+    <PageReveal className={`page matches-page ${captureMode ? 'match-capture-view' : ''}`}>
+      {captureMode ? (
+        <header className="capture-header">
+          <div className="capture-brand"><Trophy /><div><strong>EFC WORLD SERIES</strong><span>OFFICIAL MATCH BOARD</span></div></div>
+          <div className="capture-tournament"><span>TOURNAMENT</span><strong>#{String(t.state.tournamentNumber).padStart(2, '0')}</strong></div>
+          <button type="button" onClick={() => setCaptureMode(false)} aria-label="Exit screenshot view"><X /></button>
+        </header>
+      ) : (
+        <PageHead kicker="MATCH CENTRE" title="Group fixtures & results" text="Every group-stage contest in one live match feed." />
+      )}
+      <div className="matches-toolbar" aria-label="Match view controls">
+        <div className="match-filter-tabs">
+          {matchFilters.map((item) => (
+            <button
+              className={filter === item.value ? 'active' : ''}
+              type="button"
+              key={item.value}
+              aria-pressed={filter === item.value}
+              onClick={() => setFilter(item.value)}
+            >
+              {item.label}<span>{filterCount(item.value)}</span>
+            </button>
+          ))}
+        </div>
+        <button className="button ghost screenshot-button" type="button" onClick={() => setCaptureMode(true)} disabled={!t.state.matches.length}>
+          <Maximize2 /> Screenshot view
+        </button>
+      </div>
+      <GroupMatches t={t} admin={false} filter={filter} />
     </PageReveal>
   )
 }
@@ -401,7 +509,7 @@ function KnockoutMatchCard({ match, t, admin }: { match: KnockoutMatch; t: any; 
   }
 
   return (
-    <article className={`match-card knockout-match ${winner ? 'decided' : ''}`}>
+    <article className={`match-card knockout-match ${admin ? 'admin-match' : 'public-match'} ${winner ? 'decided' : ''}`}>
       <span className="match-group">Match {match.order}</span>
       <div className={`match-team ${winner?.id === home?.id ? 'winner' : ''}`}>
         <Logo team={home} small />
@@ -717,10 +825,18 @@ function Admin({ auth, t }: any) {
         <header>
           <div><p className="eyebrow">TOURNAMENT OPERATIONS</p><h1>Control centre</h1></div>
           <div className="admin-header-tools">
-            <span className="sync"><i />{t.syncing ? 'SYNCING' : 'SYSTEM ONLINE'}</span>
+            <span className={`sync sync--${t.syncing ? 'saving' : t.liveStatus}`} role="status" aria-live="polite">
+              <i />{t.syncing ? 'SAVING' : (liveLabels[t.liveStatus] || 'UPDATING')}
+            </span>
             <button className="mobile-signout" type="button" onClick={auth.signOut}><LogOut /> Sign out</button>
           </div>
         </header>
+        <nav className="admin-mobile-nav" aria-label="Admin sections">
+          <a href="#overview"><BarChart3 /> Overview</a>
+          <a href="#teams"><Users /> Teams</a>
+          <a href="#matches"><CalendarDays /> Matches</a>
+          <a href="#knockout"><GitBranch /> Knockout</a>
+        </nav>
         <section id="overview" className="admin-stats">
           <article><small>Tournament</small><strong>#{String(t.state.tournamentNumber).padStart(2, '0')}</strong></article>
           <article><small>Total teams</small><strong>{t.state.teams.length}</strong></article>

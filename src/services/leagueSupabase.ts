@@ -25,12 +25,15 @@ export async function saveRemoteState(state: TournamentState, userId: string) {
   if (error) throw error
 }
 
-export function subscribeRemote(onChange: (snapshot: RemoteStateSnapshot) => void) {
+export function subscribeRemote(
+  onChange: (snapshot: RemoteStateSnapshot) => void,
+  onStatus?: (status: string) => void,
+) {
   if (!supabase) return () => undefined
   const client = supabase
   const channel = client.channel('championship-live-v3').on('postgres_changes', { event: '*', schema: 'public', table: LEAGUE_TABLE, filter: `slug=eq.${LEAGUE_SLUG}` }, payload => {
     const row = payload.new as { results?: unknown }; if (row?.results) onChange(snapshotFrom(row.results))
-  }).subscribe()
+  }).subscribe(status => onStatus?.(status))
   return () => { void client.removeChannel(channel) }
 }
 
