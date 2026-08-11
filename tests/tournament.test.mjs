@@ -13,12 +13,15 @@ import {
   getStateMigrationKind,
   getActiveKnockoutMatches,
   getActiveKnockoutRound,
+  hasAnyMatchSchedule,
   hasAnyMatchScore,
   initialState,
   isKnockoutMatchComplete,
   isValidCompletedKnockoutBracket,
   normalizeState,
+  normalizeScheduledAt,
   resolveKnockoutWinner,
+  setMatchSchedule,
   starCounts,
   standings,
 } from '../src/utils/tournament.ts'
@@ -183,6 +186,56 @@ test('partial scores block redraw and only fully entered fixtures complete the g
   assert.equal(allGroupMatchesComplete([]), false)
   assert.equal(allGroupMatchesComplete([{ ...match, homeScore: 1 }]), false)
   assert.equal(allGroupMatchesComplete([{ ...match, homeScore: 1, awayScore: 2 }]), true)
+})
+
+test('match schedules are stable, validated, and preserved by state normalization', () => {
+  const groups = [{ id: 'g-a', name: 'Group A', teamIds: ['a', 'b'] }]
+  const [match] = generateMatches(groups)
+
+  assert.equal(match.scheduledAt, null)
+  assert.equal(normalizeScheduledAt('2026-08-12T20:30'), '2026-08-12T20:30')
+  assert.equal(normalizeScheduledAt('2026-02-30T20:30'), null)
+  assert.equal(normalizeScheduledAt('2026-08-12T24:00'), null)
+  assert.equal(normalizeScheduledAt('2026-08-12T20:30:00'), null)
+
+  const originalMatches = [match]
+  const scheduled = setMatchSchedule(originalMatches, match.id, '2026-08-12T20:30')
+  assert.ok(scheduled)
+  assert.notEqual(scheduled, originalMatches)
+  assert.equal(match.scheduledAt, null)
+  assert.equal(scheduled[0].scheduledAt, '2026-08-12T20:30')
+  assert.equal(hasAnyMatchSchedule(scheduled), true)
+  assert.equal(hasAnyMatchSchedule([match]), false)
+  assert.equal(setMatchSchedule(scheduled, 'missing', '2026-08-12T21:00'), null)
+  assert.equal(setMatchSchedule(scheduled, match.id, 'invalid'), null)
+
+  const cleared = setMatchSchedule(scheduled, match.id, null)
+  assert.ok(cleared)
+  assert.equal(cleared[0].scheduledAt, null)
+
+  const legacyMatch = { ...match }
+  delete legacyMatch.scheduledAt
+  const normalizedLegacy = normalizeState({
+    ...initialState(),
+    status: 'groups',
+    stage: 'Group Stage',
+    groups,
+    matches: [legacyMatch],
+  })
+  assert.equal(normalizedLegacy.matches[0].scheduledAt, null)
+
+  const normalizedScheduled = normalizeState({
+    ...normalizedLegacy,
+    matches: [{ ...match, scheduledAt: '2026-08-12T20:30' }],
+  })
+  assert.equal(normalizedScheduled.matches[0].scheduledAt, '2026-08-12T20:30')
+  assert.deepEqual(normalizeState(normalizedScheduled), normalizedScheduled)
+
+  const normalizedInvalid = normalizeState({
+    ...normalizedLegacy,
+    matches: [{ ...match, scheduledAt: 'not-a-date' }],
+  })
+  assert.equal(normalizedInvalid.matches[0].scheduledAt, null)
 })
 
 test('knockout readiness requires the exact generated group fixtures', () => {

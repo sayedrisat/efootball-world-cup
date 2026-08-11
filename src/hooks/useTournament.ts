@@ -11,11 +11,14 @@ import {
   getActiveKnockoutMatches,
   getActiveKnockoutRound,
   getConfirmableChampionId,
+  hasAnyMatchSchedule,
   hasAnyMatchScore,
   initialState,
   isKnockoutMatchComplete,
   normalizeState,
+  normalizeScheduledAt,
   resolveKnockoutWinner,
+  setMatchSchedule,
   standings,
   starCounts,
   type StateMigrationKind,
@@ -363,7 +366,10 @@ export function useTournament(canEdit: boolean, userId?: string) {
     () => areGroupFixturesComplete(state.groups, state.matches),
     [state.groups, state.matches],
   )
-  const canRegenerateGroups = readyToEdit && state.status === 'groups' && !hasAnyMatchScore(state.matches)
+  const canRegenerateGroups = readyToEdit
+    && state.status === 'groups'
+    && !hasAnyMatchScore(state.matches)
+    && !hasAnyMatchSchedule(state.matches)
   const canStartKnockout = readyToEdit && state.status === 'groups' && groupComplete
   const activeKnockoutRound = useMemo(
     () => getActiveKnockoutRound(state.knockoutMatches),
@@ -502,19 +508,39 @@ export function useTournament(canEdit: boolean, userId?: string) {
       setMessage('Groups can only be regenerated during the group stage.')
       return false
     }
-    if (hasAnyMatchScore(current.matches)) {
-      setMessage('Cannot regenerate groups after results are entered.')
+    if (hasAnyMatchScore(current.matches) || hasAnyMatchSchedule(current.matches)) {
+      setMessage('Clear match scores and schedules before regenerating groups.')
       return false
     }
 
     const regenerated = commit((latest) => {
       if (latest.status !== 'groups') return null
-      if (hasAnyMatchScore(latest.matches)) return null
+      if (hasAnyMatchScore(latest.matches) || hasAnyMatchSchedule(latest.matches)) return null
       const groups = generateGroups(latest.teams, latest.groups)
       return { ...latest, groups, matches: generateMatches(groups) }
     })
     if (regenerated) setMessage('Groups regenerated.')
     return regenerated
+  }
+
+  const scheduleMatch = (id: string, value: string | null) => {
+    const scheduledAt = value === null || value.trim() === '' ? null : normalizeScheduledAt(value)
+    if (value !== null && value.trim() !== '' && scheduledAt === null) {
+      setMessage('Choose a valid match date and time.')
+      return false
+    }
+    if (stateRef.current.status !== 'groups') {
+      setMessage('Group match times can only be changed during the group stage.')
+      return false
+    }
+
+    const updated = commit((current) => {
+      if (current.status !== 'groups') return null
+      const matches = setMatchSchedule(current.matches, id, scheduledAt)
+      return matches ? { ...current, matches } : null
+    })
+    if (updated) setMessage(scheduledAt ? 'Match date and time updated.' : 'Match date and time cleared.')
+    return updated
   }
 
   const score = (id: string, homeScore: number | null, awayScore: number | null) => {
@@ -755,6 +781,7 @@ export function useTournament(canEdit: boolean, userId?: string) {
     deleteTeam,
     draw,
     regenerate,
+    scheduleMatch,
     score,
     startKnockout,
     knockoutScore,

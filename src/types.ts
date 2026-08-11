@@ -2,7 +2,17 @@ export type Phase = 'registration' | 'groups' | 'knockout' | 'completed'
 
 export interface Team { id: string; name: string; imageUrl: string; createdAt: string }
 export interface Group { id: string; name: string; teamIds: string[] }
-export interface Match { id: string; groupId: string; homeId: string; awayId: string; homeScore: number | null; awayScore: number | null; playedAt?: string }
+export interface Match {
+  id: string;
+  groupId: string;
+  homeId: string;
+  awayId: string;
+  homeScore: number | null;
+  awayScore: number | null;
+  /** Admin-set Bangladesh wall-clock kickoff in YYYY-MM-DDTHH:mm format. */
+  scheduledAt: string | null;
+  playedAt?: string;
+}
 export interface KnockoutMatch {
   id: string;
   /** Number of bracket places in this round: 8, 4, 2, etc. */

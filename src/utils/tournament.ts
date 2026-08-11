@@ -59,6 +59,17 @@ function knockoutStageLabel(round: number | null) {
   return round ? `Round of ${round}` : 'Knockout Stage'
 }
 
+/** Keeps the admin-selected Bangladesh wall-clock time stable across devices. */
+export function normalizeScheduledAt(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const clean = value.trim()
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(clean)) return null
+
+  const parsed = new Date(`${clean}:00.000Z`)
+  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 16) !== clean) return null
+  return clean
+}
+
 /** Accepts both the previous v3 payload and the current v4 payload. */
 export function normalizeState(value: unknown): TournamentState {
   if (!value || typeof value !== 'object') return initialState()
@@ -72,7 +83,11 @@ export function normalizeState(value: unknown): TournamentState {
   const tournamentNumber = rollbackSkippedSix ? 6 : persistedTournamentNumber
   const teams = Array.isArray(persisted.teams) ? persisted.teams : []
   const groups = rollbackSkippedSix ? [] : Array.isArray(persisted.groups) ? persisted.groups : []
-  const matches = rollbackSkippedSix ? [] : Array.isArray(persisted.matches) ? persisted.matches : []
+  const storedMatches = rollbackSkippedSix ? [] : Array.isArray(persisted.matches) ? persisted.matches : []
+  const matches = storedMatches.map(match => ({
+    ...match,
+    scheduledAt: normalizeScheduledAt(match.scheduledAt),
+  }))
   const knockoutMatches = rollbackSkippedSix ? [] : Array.isArray(persisted.knockoutMatches) ? persisted.knockoutMatches : []
   const persistedHistory = Array.isArray(persisted.history) && persisted.history.length ? persisted.history : [...seededHistory]
   const history = rollbackSkippedSix
@@ -233,7 +248,23 @@ export function generateMatches(groups: Group[]): Match[] {
     awayId,
     homeScore: null,
     awayScore: null,
+    scheduledAt: null,
   }))))
+}
+
+/** Returns a new match list when a valid target schedule changes. */
+export function setMatchSchedule(matches: Match[], id: string, value: unknown): Match[] | null {
+  const clean = typeof value === 'string' ? value.trim() : value
+  const scheduledAt = clean === '' || clean === null ? null : normalizeScheduledAt(clean)
+  if (clean !== '' && clean !== null && scheduledAt === null) return null
+
+  const target = matches.find(match => match.id === id)
+  if (!target || target.scheduledAt === scheduledAt) return null
+  return matches.map(match => match.id === id ? { ...match, scheduledAt } : match)
+}
+
+export function hasAnyMatchSchedule(matches: Match[]) {
+  return matches.some(match => normalizeScheduledAt(match.scheduledAt) !== null)
 }
 
 /** True even for a partial score, so a redraw cannot discard either entered side. */

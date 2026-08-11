@@ -35,7 +35,7 @@ import {
 import { useSupabaseAuth } from './hooks/useSupabaseAuth'
 import { useTournament } from './hooks/useTournament'
 import type { Group, KnockoutMatch, Match, Standing, Team } from './types'
-import { standings } from './utils/tournament'
+import { normalizeScheduledAt, standings } from './utils/tournament'
 
 const fallback = (name: string) =>
   `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=102a54&color=45d7ff&bold=true&size=256`
@@ -338,6 +338,27 @@ const matchFilters: Array<{ label: string; value: MatchFilter }> = [
 
 const matchIsFinished = (match: Match) => match.homeScore !== null && match.awayScore !== null
 
+const matchDateFormatter = new Intl.DateTimeFormat('en-GB', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'UTC',
+})
+
+function matchScheduleParts(value: string | null) {
+  const scheduledAt = normalizeScheduledAt(value)
+  if (!scheduledAt) return null
+
+  const [datePart, timePart] = scheduledAt.split('T')
+  const [hourText, minute] = timePart.split(':')
+  const hour = Number(hourText)
+  return {
+    scheduledAt,
+    date: matchDateFormatter.format(new Date(`${datePart}T00:00:00.000Z`)).toUpperCase(),
+    time: `${hour % 12 || 12}:${minute} ${hour >= 12 ? 'PM' : 'AM'} BDT`,
+  }
+}
+
 function GroupMatches({ t, admin, filter = 'all' }: { t: any; admin: boolean; filter?: MatchFilter }) {
   const teamsById = Object.fromEntries(t.state.teams.map((team: Team) => [team.id, team])) as Record<string, Team>
   const scoresLocked = !t.hydrated || t.state.status !== 'groups'
@@ -375,6 +396,7 @@ function GroupMatches({ t, admin, filter = 'all' }: { t: any; admin: boolean; fi
                 const away = teamsById[match.awayId]
                 const finished = matchIsFinished(match)
                 const matchNumber = allGroupMatches.findIndex((item: Match) => item.id === match.id) + 1
+                const schedule = matchScheduleParts(match.scheduledAt)
 
                 return (
                   <article className={`match-card fixture-card ${admin ? 'admin-match' : 'public-match'} ${finished ? 'is-finished' : 'is-pending'}`} key={match.id}>
@@ -382,6 +404,27 @@ function GroupMatches({ t, admin, filter = 'all' }: { t: any; admin: boolean; fi
                       <span className="match-group">{group.name}</span>
                       <span className="match-number">MATCH {String(matchNumber || index + 1).padStart(2, '0')}</span>
                       <span className="match-state">{finished ? 'FT' : 'NEXT'}</span>
+                      <div className={`match-schedule ${admin ? 'match-schedule--editor' : ''}`}>
+                        {admin ? (
+                          <label>
+                            <span><CalendarDays /> DATE & TIME <b>BDT</b></span>
+                            <input
+                              aria-label={`Schedule ${home?.name} versus ${away?.name}`}
+                              type="datetime-local"
+                              step="60"
+                              disabled={scoresLocked}
+                              value={match.scheduledAt ?? ''}
+                              onChange={(event) => t.scheduleMatch(match.id, event.target.value || null)}
+                            />
+                          </label>
+                        ) : schedule ? (
+                          <time dateTime={`${schedule.scheduledAt}:00+06:00`} aria-label={`${schedule.date} at ${schedule.time}`}>
+                            <CalendarDays /><span>{schedule.date}</span><strong>{schedule.time}</strong>
+                          </time>
+                        ) : (
+                          <span className="match-schedule--unset"><CalendarDays /> DATE & TIME TBA</span>
+                        )}
+                      </div>
                     </div>
                     <div className="match-team"><Logo team={home} small /><strong>{home?.name}</strong></div>
                     {admin ? (
@@ -720,7 +763,7 @@ function CompetitionControls({ t, onDraw, onRedraw, onNext }: { t: any; onDraw: 
           <span>{t.groupComplete ? 'The qualified teams can now enter the knockout bracket.' : 'Every score must be completed before knockout can start.'}</span>
         </div>
         <div className="actions">
-          <button className="button ghost" type="button" disabled={!t.canRegenerateGroups} onClick={onRedraw} title={t.canRegenerateGroups ? 'Create a fresh random draw' : 'Clear every score field before regenerating groups'}><RotateCcw /> Regenerate Groups</button>
+          <button className="button ghost" type="button" disabled={!t.canRegenerateGroups} onClick={onRedraw} title={t.canRegenerateGroups ? 'Create a fresh random draw' : 'Clear every score and schedule before regenerating groups'}><RotateCcw /> Regenerate Groups</button>
           <button className="button primary" type="button" disabled={!t.canStartKnockout} onClick={() => t.startKnockout()}><GitBranch /> Start knockout</button>
         </div>
       </div>
