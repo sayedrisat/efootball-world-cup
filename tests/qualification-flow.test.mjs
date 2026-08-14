@@ -391,6 +391,14 @@ test('unplayed legacy semifinal bracket is repaired into the six-team knockout s
   assert.ok(hasValidKnockoutStageFixtures(repaired.qualifiedTeamIds, repaired.knockoutStageMatches))
   assert.deepEqual(repaired.knockoutMatches, [])
 
+  const normalizedLiveSnapshot = normalizeState(legacyState)
+  assert.equal(normalizedLiveSnapshot.version, 5)
+  assert.equal(normalizedLiveSnapshot.status, 'knockout')
+  assert.equal(normalizedLiveSnapshot.stage, 'Knockout Stage')
+  assert.equal(normalizedLiveSnapshot.qualifiedTeamIds.length, 6)
+  assert.equal(normalizedLiveSnapshot.knockoutStageMatches.length, 15)
+  assert.deepEqual(normalizedLiveSnapshot.knockoutMatches, [])
+
   const scoredLegacyState = {
     ...legacyState,
     knockoutMatches: legacySemifinals.map((match, index) => index === 0

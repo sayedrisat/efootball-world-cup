@@ -139,40 +139,49 @@ export function normalizeState(value: unknown): TournamentState {
     winnerId: persistedWinnerId,
     updatedAt: typeof persisted.updatedAt === 'string' ? persisted.updatedAt : fresh.updatedAt,
   }
-  const final = knockoutMatches.find(match => match.round === 2)
+  const repairedCandidate = reconcileTournamentProgression(candidate)
+  const normalizedCandidate = repairedCandidate === candidate ? candidate : repairedCandidate
+  const final = normalizedCandidate.knockoutMatches.find(match => match.round === 2)
   const hasArchivedWinner = Boolean(persistedWinnerId && history.some(item =>
     item.tournamentNumber === tournamentNumber && item.winnerId === persistedWinnerId))
-  const hasTrustedCompletion = isSixTeamChampionship(candidate)
-    ? isValidCompletedSixTeamChampionship(candidate)
+  const hasTrustedCompletion = isSixTeamChampionship(normalizedCandidate)
+    ? isValidCompletedSixTeamChampionship(normalizedCandidate)
     : Boolean(
         final
         && persistedWinnerId
         && resolveKnockoutWinner(final) === persistedWinnerId
-        && isValidCompletedKnockoutBracket(groups, teams, matches, knockoutMatches)
+        && isValidCompletedKnockoutBracket(
+          normalizedCandidate.groups,
+          normalizedCandidate.teams,
+          normalizedCandidate.matches,
+          normalizedCandidate.knockoutMatches,
+        )
         && hasArchivedWinner
       )
   // Older and malformed payloads could say "completed" without a resolved,
   // archived final. Reopen the last recoverable stage instead of exposing Next.
   const reopenInvalidCompletion = persistedStatus === 'completed' && !hasTrustedCompletion
-  const recoveredStatus: Phase = knockoutMatches.length || knockoutStageMatches.length || qualifiedTeamIds.length
+  const recoveredStatus: Phase = normalizedCandidate.knockoutMatches.length
+    || normalizedCandidate.knockoutStageMatches.length
+    || normalizedCandidate.qualifiedTeamIds.length
     ? 'knockout'
-    : groups.length ? 'groups' : 'registration'
+    : normalizedCandidate.groups.length ? 'groups' : 'registration'
   const status: Phase = reopenInvalidCompletion ? recoveredStatus : persistedStatus
 
   return {
-    ...candidate,
+    ...normalizedCandidate,
     status,
     stage: reopenInvalidCompletion
       ? (recoveredStatus === 'knockout'
-          ? (isSixTeamChampionship(candidate)
-              ? sixTeamStageLabel(candidate)
-              : knockoutStageLabel(getActiveKnockoutRound(knockoutMatches)))
+          ? (isSixTeamChampionship(normalizedCandidate)
+              ? sixTeamStageLabel(normalizedCandidate)
+              : knockoutStageLabel(getActiveKnockoutRound(normalizedCandidate.knockoutMatches)))
           : recoveredStatus === 'groups' ? 'Group Stage' : 'Team Registration')
-      : candidate.stage,
+      : normalizedCandidate.stage,
     history: reopenInvalidCompletion
       ? history.filter(item => item.tournamentNumber !== tournamentNumber)
       : history,
-    winnerId: reopenInvalidCompletion ? null : persistedWinnerId,
+    winnerId: reopenInvalidCompletion ? null : normalizedCandidate.winnerId,
   }
 }
 
