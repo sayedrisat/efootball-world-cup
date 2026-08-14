@@ -18,7 +18,7 @@ with repair_candidate as (
     ) as repaired_history
   from public.league_tournaments
   where slug = 'main'
-    and results ->> 'version' in ('3', '4')
+    and results ->> 'version' in ('3', '4', '5')
     and results ->> 'tournamentNumber' = '7'
     and results ->> 'status' in ('registration', 'groups', 'knockout')
     and results -> 'winnerId' = 'null'::jsonb
@@ -46,12 +46,14 @@ with repair_candidate as (
 update public.league_tournaments as tournament
 set
   results = tournament.results || jsonb_build_object(
-    'version', 4,
+    'version', 5,
     'tournamentNumber', 6,
     'status', 'registration',
     'stage', 'Team Registration',
     'groups', '[]'::jsonb,
     'matches', '[]'::jsonb,
+    'qualifiedTeamIds', '[]'::jsonb,
+    'knockoutStageMatches', '[]'::jsonb,
     'knockoutMatches', '[]'::jsonb,
     'winnerId', null,
     'history', repair_candidate.repaired_history,

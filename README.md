@@ -1,15 +1,16 @@
 # E-Football Group Cup
 
-Live React tournament manager with unlimited teams, randomized groups, live standings, knockout rounds, a gated final and protected admin controls.
+Live React tournament manager with randomized groups, live standings, a six-team qualification championship, a gated final and protected admin controls.
 
 ## Tournament flow
 
 1. Admin adds any number of teams with a team name and logo URL.
 2. The app creates securely randomized, balanced groups of up to four teams. Groups can be regenerated while every score field is empty.
-3. Group scores update the live ranking automatically; the top two teams in each group qualify.
-4. The knockout bracket stays locked until every group fixture is complete, then supports power-of-two rounds and byes.
-5. Drawn knockout matches require a penalty winner. Winners advance through separate rounds to the final.
-6. The next tournament remains locked until the final winner is confirmed and archived.
+3. Group scores and rankings keep using the existing 3/1/0 points and tie-break rules.
+4. When the completed draw is exactly Group A and Group B with at least three teams each, the top three from each group qualify automatically.
+5. The six qualifiers play one round robin: every pair meets once, for 15 matches and five matches per team. These standings use only those 15 results and allow draws.
+6. The top four continue through Semifinal 1 (#1 vs #2), the Spot Semifinal (#3 vs #4), Semifinal 2, and the Grand Final. Drawn playoff matches require a penalty winner.
+7. The champion is archived automatically after the verified Grand Final. Existing legacy brackets and tournament data remain supported.
 
 ## Routes
 
@@ -17,6 +18,7 @@ Live React tournament manager with unlimited teams, randomized groups, live stan
 - `/rankings` Live ranking
 - `/teams` Registered teams
 - `/groups` Group stage
+- `/roadmap` Animated live tournament roadmap
 - `/matches` Group fixtures and results
 - `/knockout` Knockout stage and final
 - `/history` Champion history

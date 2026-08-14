@@ -354,3 +354,123 @@ input,select{font-size:16px}
   .fixture-board--public{grid-template-columns:repeat(2,minmax(0,1fr))}
   .fixture-group{break-inside:avoid;box-shadow:none}
 }
+
+/* Six-team qualification and championship flow */
+.championship-flow{display:grid;min-width:0}
+.championship-playoff-step{display:grid;min-width:0}
+.championship-stage{min-width:0;padding:24px;border:1px solid var(--line);background:linear-gradient(145deg,rgba(8,25,47,.9),rgba(4,13,26,.92));box-shadow:0 20px 55px rgba(0,0,0,.13)}
+.championship-stage.stage-active{border-color:rgba(69,215,255,.4);box-shadow:0 0 32px rgba(69,215,255,.06)}
+.championship-stage.stage-complete{border-color:rgba(51,236,152,.27);background:linear-gradient(145deg,rgba(7,42,48,.55),rgba(4,13,26,.92))}
+.championship-stage.stage-locked{opacity:.84}
+.championship-stage-head{display:grid;grid-template-columns:58px minmax(0,1fr) auto;align-items:start;gap:18px;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--line)}
+.championship-step{display:grid;place-items:center;width:52px;height:52px;border:1px solid rgba(69,215,255,.28);color:var(--cyan);background:rgba(69,215,255,.05);font:800 24px/1 'Barlow Condensed'}
+.championship-stage-head .eyebrow{margin:0 0 7px;font-size:8px}
+.championship-stage-head h2{margin:0;color:white;font:700 clamp(30px,4vw,43px)/1 'Barlow Condensed';text-transform:uppercase}
+.championship-stage-head>div>p:last-child{max-width:780px;margin:10px 0 0;color:#8ea1b9;font-size:12px;line-height:1.65}
+.championship-status{align-self:start;padding:7px 9px;border:1px solid var(--line);color:#91a4bc;background:rgba(4,14,28,.78);font-size:8px;font-weight:900;letter-spacing:.11em;white-space:nowrap}
+.championship-status.status-active{border-color:rgba(69,215,255,.3);color:var(--cyan)}
+.championship-status.status-complete{border-color:rgba(51,236,152,.3);color:#5bf0ac}
+.championship-stage-body{min-width:0}
+.championship-connector{display:grid;place-items:center;height:52px;color:var(--cyan)}
+.championship-connector:before,.championship-connector:after{width:1px;height:12px;background:rgba(69,215,255,.3);content:''}
+.championship-connector svg{width:19px;height:19px;transform:rotate(90deg)}
+.championship-groups{gap:14px}
+.stage-locked{display:flex;align-items:center;justify-content:center;gap:12px;min-height:92px;padding:22px;border:1px dashed rgba(134,185,255,.2);color:#8497af;background:rgba(3,12,24,.45);font-size:11px;line-height:1.55;text-align:center}
+.stage-locked svg{flex:none;width:20px;color:#6e829b}
+.qualified-team-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.qualified-team-card{position:relative;display:grid;grid-template-columns:52px minmax(0,1fr) 22px;align-items:center;gap:12px;min-width:0;min-height:92px;padding:15px;border:1px solid rgba(69,215,255,.18);background:linear-gradient(135deg,rgba(13,48,78,.58),rgba(4,15,29,.85));overflow:hidden}
+.qualified-team-card .team-logo{width:52px;height:52px}
+.qualified-team-card>div{display:grid;min-width:0;gap:3px}
+.qualified-team-card small{color:#8296ae;font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.09em}
+.qualified-team-card strong{overflow:hidden;color:white;font:700 21px/1.05 'Barlow Condensed';text-overflow:ellipsis;text-transform:uppercase;white-space:nowrap}
+.qualified-team-card>div>span{color:#5bf0ac;font-size:7px;font-weight:900;letter-spacing:.12em}
+.qualified-team-card>svg{width:18px;color:#5bf0ac}
+.qualified-seed{position:absolute;right:5px;bottom:-11px;color:rgba(255,255,255,.04);font:800 52px 'Barlow Condensed'}
+.round-robin-summary{display:grid;grid-template-columns:repeat(4,1fr);margin-bottom:12px;border:1px solid var(--line);background:rgba(3,12,24,.55)}
+.round-robin-summary span{padding:12px;border-right:1px solid var(--line);color:#8498b0;font-size:8px;font-weight:800;letter-spacing:.09em;text-align:center}
+.round-robin-summary span:last-child{border:0}
+.round-robin-summary b{color:var(--cyan);font-size:13px}
+.round-robin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:9px}
+.round-robin-match{grid-template-columns:minmax(0,1fr) minmax(100px,auto) minmax(0,1fr);grid-template-rows:auto 1fr;gap:8px;min-width:0;min-height:118px;padding:10px 14px;border-color:rgba(134,185,255,.17);background:linear-gradient(150deg,rgba(10,34,61,.72),rgba(4,14,28,.94))}
+.round-robin-match.is-finished{border-color:rgba(51,236,152,.23);background:linear-gradient(150deg,rgba(8,45,50,.54),rgba(4,14,28,.94))}
+.round-robin-match-meta{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding-bottom:7px;border-bottom:1px solid rgba(134,185,255,.1);color:#7e92aa;font-size:7px;font-weight:900;letter-spacing:.11em}
+.round-robin-match-meta small{padding:3px 5px;border:1px solid rgba(246,200,95,.24);color:var(--gold);font-size:7px}
+.round-robin-match.is-finished .round-robin-match-meta small{border-color:rgba(51,236,152,.25);color:#5bf0ac}
+.round-robin-match .match-team{display:grid;align-content:center;justify-content:stretch;justify-items:center;gap:5px;min-width:0;font-size:9px;line-height:1.2;text-align:center}
+.round-robin-match .match-team.away{justify-content:stretch}
+.round-robin-match .match-team.away .team-logo{grid-row:1}
+.round-robin-match .match-team.away strong{grid-row:2}
+.round-robin-match .match-team strong{max-width:100%;overflow:hidden;overflow-wrap:anywhere}
+.round-robin-match .score,.round-robin-match .score-edit{align-self:center}
+.round-robin-match .score-edit input{width:42px;height:42px;padding:0 3px}
+.playoff-match-shell{width:min(820px,100%);margin:auto}
+.playoff-match-shell .knockout-match{background:linear-gradient(145deg,rgba(11,39,69,.75),rgba(4,14,28,.94))}
+.standings-pathway{display:grid;grid-template-columns:repeat(3,1fr);margin-top:10px;border:1px solid var(--line);background:rgba(3,12,24,.65)}
+.standings-pathway span{padding:12px;border-right:1px solid var(--line);color:#91a4bc;font-size:8px;font-weight:900;letter-spacing:.1em;text-align:center}
+.standings-pathway span:last-child{border:0}
+.standings-pathway b{margin-right:5px;color:var(--cyan);font-size:11px}
+.standings-pathway .eliminated,.standings-pathway .eliminated b{color:#ff8290}
+.knockout-standings-table .standing-row.rank-4{background:linear-gradient(90deg,rgba(69,215,255,.04),transparent)}
+.knockout-standings-table .standing-row.rank-5,.knockout-standings-table .standing-row.rank-6{background:linear-gradient(90deg,rgba(255,101,114,.07),transparent)}
+.champion-spotlight{position:relative;display:grid;grid-template-columns:auto 86px minmax(0,1fr) auto;align-items:center;gap:20px;min-height:150px;padding:24px;border:1px solid rgba(246,200,95,.35);background:radial-gradient(circle at 65%,rgba(246,200,95,.17),transparent 35%),linear-gradient(135deg,rgba(54,40,11,.42),rgba(4,14,28,.94));overflow:hidden}
+.champion-spotlight>svg:first-child{width:45px;color:var(--gold)}
+.champion-spotlight>svg:last-child{width:80px;height:80px;color:rgba(246,200,95,.15)}
+.champion-spotlight .team-logo{width:86px;height:86px;border-color:rgba(246,200,95,.45)}
+.champion-spotlight>div{display:grid;min-width:0;gap:5px}
+.champion-spotlight small{color:var(--gold);font-size:9px;font-weight:900;letter-spacing:.13em}
+.champion-spotlight strong{overflow-wrap:anywhere;font:800 clamp(34px,6vw,60px)/.9 'Barlow Condensed';text-transform:uppercase}
+.championship-flow--admin .championship-stage{padding:18px}
+
+@media(max-width:1000px){
+  .qualified-team-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .round-robin-grid{grid-template-columns:1fr}
+}
+
+@media(max-width:720px){
+  .knockout-standings-table{overflow-x:auto}
+  .knockout-standings-table .standing-row{grid-template-columns:40px minmax(155px,1fr) repeat(8,46px);min-width:670px;padding:0 10px}
+  .knockout-standings-table .standing-row .standing-secondary{display:block}
+  .standings-pathway{grid-template-columns:1fr}
+  .standings-pathway span{border-right:0;border-bottom:1px solid var(--line)}
+  .standings-pathway span:last-child{border-bottom:0}
+}
+
+@media(max-width:600px){
+  .championship-stage,.championship-flow--admin .championship-stage{padding:12px}
+  .championship-stage-head{grid-template-columns:44px minmax(0,1fr);gap:11px;margin-bottom:14px;padding-bottom:14px}
+  .championship-step{width:42px;height:42px;font-size:20px}
+  .championship-stage-head h2{font-size:29px}
+  .championship-stage-head>div>p:last-child{font-size:11px}
+  .championship-status{grid-column:1/-1;justify-self:stretch;text-align:center}
+  .championship-connector{height:40px}
+  .qualified-team-grid{grid-template-columns:1fr}
+  .qualified-team-card{grid-template-columns:46px minmax(0,1fr) 20px;min-height:82px;padding:12px}
+  .qualified-team-card .team-logo{width:46px;height:46px}
+  .round-robin-summary{grid-template-columns:repeat(2,1fr)}
+  .round-robin-summary span:nth-child(2){border-right:0}
+  .round-robin-summary span:nth-child(-n+2){border-bottom:1px solid var(--line)}
+  .round-robin-grid{grid-template-columns:minmax(0,1fr)}
+  .round-robin-match,.round-robin-match.admin-match{grid-template-columns:minmax(0,1fr) minmax(92px,auto) minmax(0,1fr);grid-template-rows:auto 1fr;gap:5px;padding:9px 6px}
+  .round-robin-match>.round-robin-match-meta{grid-column:1/-1;grid-row:1}
+  .round-robin-match.admin-match>.match-team:not(.away){grid-column:1;grid-row:2}
+  .round-robin-match.admin-match>.match-team.away{grid-column:3;grid-row:2}
+  .round-robin-match.admin-match>.score-edit{grid-column:2;grid-row:2;margin:0;padding:0;border:0}
+  .round-robin-match .score-edit input{width:38px;height:42px}
+  .round-robin-match .team-logo.small{width:29px;height:29px}
+  .playoff-match-shell .knockout-match>.match-group{grid-column:1/-1}
+  .champion-spotlight{grid-template-columns:52px minmax(0,1fr);gap:12px;min-height:120px;padding:16px}
+  .champion-spotlight>svg:first-child{display:none}
+  .champion-spotlight .team-logo{width:52px;height:52px}
+  .champion-spotlight>svg:last-child{position:absolute;right:10px;bottom:8px;width:55px;height:55px}
+  .champion-spotlight strong{font-size:35px}
+}
+
+@media(max-width:360px){
+  .championship-stage,.championship-flow--admin .championship-stage{padding:8px}
+  .championship-stage-head{grid-template-columns:38px minmax(0,1fr);gap:8px}
+  .championship-step{width:36px;height:36px;font-size:18px}
+  .championship-stage-head h2{font-size:25px}
+  .round-robin-match,.round-robin-match.admin-match{grid-template-columns:minmax(0,1fr) minmax(84px,auto) minmax(0,1fr)}
+  .round-robin-match .score-edit{gap:3px}
+  .round-robin-match .score-edit input{width:34px}
+}

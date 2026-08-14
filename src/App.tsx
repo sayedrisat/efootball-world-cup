@@ -34,8 +34,9 @@ import {
 } from 'lucide-react'
 import { useSupabaseAuth } from './hooks/useSupabaseAuth'
 import { useTournament } from './hooks/useTournament'
-import type { Group, KnockoutMatch, Match, Standing, Team } from './types'
+import type { Group, KnockoutMatch, Match, RoundRobinMatch, Standing, Team } from './types'
 import { normalizeScheduledAt, standings } from './utils/tournament'
+import Roadmap from './components/Roadmap'
 
 const fallback = (name: string) =>
   `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=102a54&color=45d7ff&bold=true&size=256`
@@ -92,6 +93,7 @@ function Navigation({ liveStatus }: { liveStatus: string }) {
     ['/rankings', 'Rankings'],
     ['/teams', 'Teams'],
     ['/groups', 'Groups'],
+    ['/roadmap', 'Roadmap'],
     ['/matches', 'Matches'],
     ['/knockout', 'Knockout'],
     ['/history', 'History'],
@@ -139,6 +141,7 @@ function App() {
         <Route path="/rankings" element={<Rankings t={tournament} />} />
         <Route path="/teams" element={<Teams t={tournament} />} />
         <Route path="/groups" element={<Groups t={tournament} />} />
+        <Route path="/roadmap" element={<Roadmap t={tournament} />} />
         <Route path="/matches" element={<MatchesPage t={tournament} />} />
         <Route path="/knockout" element={<KnockoutPage t={tournament} />} />
         <Route path="/history" element={<History t={tournament} />} />
@@ -177,7 +180,7 @@ function Home({ t }: any) {
           <p className="hero-copy">Elite competitors. One digital arena. Every goal writes history.</p>
           <div className="actions">
             <NavLink className="button primary" to="/rankings">Live ranking <ChevronRight /></NavLink>
-            <NavLink className="button ghost" to="/knockout">View bracket</NavLink>
+            <NavLink className="button ghost" to="/roadmap"><GitBranch /> Explore roadmap</NavLink>
           </div>
         </div>
         <div className="cup-wrap">
@@ -225,7 +228,15 @@ function Empty({ icon, title, text }: { icon: ReactNode; title: string; text: st
   return <div className="empty">{icon}<h2>{title}</h2><p>{text}</p></div>
 }
 
-function RankingTable({ rows }: { rows: Standing[] }) {
+function RankingTable({
+  rows,
+  ariaLabel = 'Live tournament rankings',
+  className = '',
+}: {
+  rows: Standing[];
+  ariaLabel?: string;
+  className?: string;
+}) {
   const ref = useRef<HTMLDivElement>(null)
 
   useLayoutEffect(() => {
@@ -237,7 +248,7 @@ function RankingTable({ rows }: { rows: Standing[] }) {
   }, [rows.length])
 
   return (
-    <div className="table-wrap" ref={ref} role="table" aria-label="Live tournament rankings">
+    <div className={`table-wrap ${className}`.trim()} ref={ref} role="table" aria-label={ariaLabel}>
       <div className="standing-row table-head" role="row"><span role="columnheader">#</span><span role="columnheader">Club</span><span role="columnheader">P</span><span className="standing-secondary" role="columnheader">W</span><span className="standing-secondary" role="columnheader">D</span><span className="standing-secondary" role="columnheader">L</span><span className="standing-secondary" role="columnheader">GF</span><span className="standing-secondary" role="columnheader">GA</span><span role="columnheader">GD</span><span role="columnheader">PTS</span></div>
       {rows.map((row) => (
         <div className={`standing-row rank-${row.position}`} key={row.id} role="row">
@@ -361,7 +372,7 @@ function matchScheduleParts(value: string | null) {
 
 function GroupMatches({ t, admin, filter = 'all' }: { t: any; admin: boolean; filter?: MatchFilter }) {
   const teamsById = Object.fromEntries(t.state.teams.map((team: Team) => [team.id, team])) as Record<string, Team>
-  const scoresLocked = !t.hydrated || t.state.status !== 'groups'
+  const scoresLocked = !t.hydrated || !t.canEditGroupMatches
   const visibleMatches = t.state.matches.filter((match: Match) => {
     if (filter === 'pending') return !matchIsFinished(match)
     if (filter === 'finished') return matchIsFinished(match)
@@ -531,12 +542,28 @@ function scoreValue(value: string) {
   return value === '' ? null : Number(value)
 }
 
-function KnockoutMatchCard({ match, t, admin }: { match: KnockoutMatch; t: any; admin: boolean }) {
+function KnockoutMatchCard({
+  match,
+  t,
+  admin,
+  matchLabel,
+  editableOverride,
+  winnerText,
+}: {
+  match: KnockoutMatch;
+  t: any;
+  admin: boolean;
+  matchLabel?: string;
+  editableOverride?: boolean;
+  winnerText?: (winner: Team) => string;
+}) {
   const teamsById = Object.fromEntries(t.state.teams.map((team: Team) => [team.id, team])) as Record<string, Team>
   const home = match.homeId ? teamsById[match.homeId] : undefined
   const away = match.awayId ? teamsById[match.awayId] : undefined
   const isBye = !match.homeId || !match.awayId
-  const editable = admin && t.hydrated && t.state.status === 'knockout' && t.activeKnockoutRound === match.round && !isBye
+  const stageIsEditable = editableOverride
+    ?? (t.state.status === 'knockout' && t.activeKnockoutRound === match.round)
+  const editable = admin && t.hydrated && stageIsEditable && !isBye
   const needsPenalties = match.homeScore !== null && match.awayScore !== null && match.homeScore === match.awayScore
   const winner = match.winnerId ? teamsById[match.winnerId] : undefined
 
@@ -553,7 +580,7 @@ function KnockoutMatchCard({ match, t, admin }: { match: KnockoutMatch; t: any; 
 
   return (
     <article className={`match-card knockout-match ${admin ? 'admin-match' : 'public-match'} ${winner ? 'decided' : ''}`}>
-      <span className="match-group">Match {match.order}</span>
+      <span className="match-group">{matchLabel || `Match ${match.order}`}</span>
       <div className={`match-team ${winner?.id === home?.id ? 'winner' : ''}`}>
         <Logo team={home} small />
         <strong>{home?.name || 'BYE'}</strong>
@@ -587,7 +614,7 @@ function KnockoutMatchCard({ match, t, admin }: { match: KnockoutMatch; t: any; 
           )}
         </div>
       )}
-      {winner && <div className="winner-chip"><Check /> {match.round === 2 ? `${winner.name} wins the final` : `${winner.name} advances`}</div>}
+      {winner && <div className="winner-chip"><Check /> {winnerText ? winnerText(winner) : match.round === 2 ? `${winner.name} wins the final` : `${winner.name} advances`}</div>}
     </article>
   )
 }
@@ -619,11 +646,362 @@ function KnockoutMatches({ t, admin }: { t: any; admin: boolean }) {
   )
 }
 
+type QualificationEntry = {
+  team: Team;
+  groupName: string;
+  groupPosition: number;
+}
+
+type RoundRobinStageMatch = RoundRobinMatch & { order?: number }
+
+type ChampionshipStageTone = 'complete' | 'active' | 'locked'
+
+function ChampionshipStage({
+  step,
+  kicker,
+  title,
+  text,
+  status,
+  tone,
+  children,
+}: {
+  step: string;
+  kicker: string;
+  title: string;
+  text: string;
+  status: string;
+  tone: ChampionshipStageTone;
+  children: ReactNode;
+}) {
+  return (
+    <section className={`championship-stage stage-${tone}`} data-reveal>
+      <header className="championship-stage-head">
+        <span className="championship-step">{step}</span>
+        <div>
+          <p className="eyebrow">{kicker}</p>
+          <h2>{title}</h2>
+          <p>{text}</p>
+        </div>
+        <span className={`championship-status status-${tone}`}>{status}</span>
+      </header>
+      <div className="championship-stage-body">{children}</div>
+    </section>
+  )
+}
+
+function ChampionshipConnector() {
+  return <div className="championship-connector" aria-hidden="true"><ChevronRight /></div>
+}
+
+function LockedStage({ text }: { text: string }) {
+  return <div className="stage-locked"><LockKeyhole /><span>{text}</span></div>
+}
+
+function QualifiedTeams({ entries }: { entries: QualificationEntry[] }) {
+  return (
+    <div className="qualified-team-grid" role="list" aria-label="Six teams qualified from the group stage">
+      {entries.map((entry, index) => (
+        <article className="qualified-team-card" role="listitem" key={entry.team.id}>
+          <span className="qualified-seed">Q{index + 1}</span>
+          <Logo team={entry.team} />
+          <div>
+            <small>{entry.groupName} · #{entry.groupPosition}</small>
+            <strong>{entry.team.name}</strong>
+            <span>QUALIFIED</span>
+          </div>
+          <Check />
+        </article>
+      ))}
+    </div>
+  )
+}
+
+const roundRobinMatchIsFinished = (match: RoundRobinStageMatch) =>
+  match.homeScore !== null && match.awayScore !== null
+
+function RoundRobinMatchCard({
+  match,
+  index,
+  t,
+  admin,
+}: {
+  match: RoundRobinStageMatch;
+  index: number;
+  t: any;
+  admin: boolean;
+}) {
+  const teamsById = Object.fromEntries(t.state.teams.map((team: Team) => [team.id, team])) as Record<string, Team>
+  const home = teamsById[match.homeId]
+  const away = teamsById[match.awayId]
+  const finished = roundRobinMatchIsFinished(match)
+  const editable = Boolean(admin && t.hydrated && t.canEditKnockoutStageMatches)
+
+  return (
+    <article className={`match-card round-robin-match ${admin ? 'admin-match' : 'public-match'} ${finished ? 'is-finished' : 'is-pending'}`} role="listitem">
+      <div className="round-robin-match-meta">
+        <span>MATCH {String(match.order ?? index + 1).padStart(2, '0')}</span>
+        <small>{finished ? 'FT' : 'NEXT'}</small>
+      </div>
+      <div className="match-team"><Logo team={home} small /><strong>{home?.name || 'TBD'}</strong></div>
+      {admin ? (
+        <div className="score-edit">
+          <input
+            aria-label={`${home?.name || 'Home team'} score`}
+            type="number"
+            inputMode="numeric"
+            min="0"
+            max="99"
+            disabled={!editable}
+            value={match.homeScore ?? ''}
+            onChange={(event) => t.knockoutStageScore(match.id, scoreValue(event.target.value), match.awayScore)}
+          />
+          <i>—</i>
+          <input
+            aria-label={`${away?.name || 'Away team'} score`}
+            type="number"
+            inputMode="numeric"
+            min="0"
+            max="99"
+            disabled={!editable}
+            value={match.awayScore ?? ''}
+            onChange={(event) => t.knockoutStageScore(match.id, match.homeScore, scoreValue(event.target.value))}
+          />
+        </div>
+      ) : (
+        <strong className="score" aria-label={finished ? `${home?.name} ${match.homeScore}, ${away?.name} ${match.awayScore}` : `${home?.name} versus ${away?.name}`}>
+          {match.homeScore ?? '–'} <i>:</i> {match.awayScore ?? '–'}
+        </strong>
+      )}
+      <div className="match-team away"><strong>{away?.name || 'TBD'}</strong><Logo team={away} small /></div>
+    </article>
+  )
+}
+
+function RoundRobinMatches({ t, admin }: { t: any; admin: boolean }) {
+  const matches = (t.knockoutStageMatches ?? []) as RoundRobinStageMatch[]
+  const completed = Number.isInteger(t.completedKnockoutStageMatches)
+    ? t.completedKnockoutStageMatches
+    : matches.filter(roundRobinMatchIsFinished).length
+
+  return (
+    <>
+      <div className="round-robin-summary">
+        <span><b>{completed}</b> / 15 PLAYED</span>
+        <span>6 TEAMS</span>
+        <span>5 MATCHES EACH</span>
+        <span>EVERY PAIR ONCE</span>
+      </div>
+      <div className="round-robin-grid" role="list" aria-label="Knockout stage round-robin fixtures">
+        {[...matches]
+          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+          .map((match, index) => <RoundRobinMatchCard key={match.id} match={match} index={index} t={t} admin={admin} />)}
+      </div>
+    </>
+  )
+}
+
+const playoffStageDetails = [
+  {
+    key: 'semifinal-1',
+    step: '05',
+    kicker: 'TOP TWO SHOWDOWN',
+    title: 'Semifinal 1',
+    text: 'Knockout rank #1 faces rank #2. The winner goes directly to the Grand Final; the loser moves to Semifinal 2.',
+    lockedText: 'Waiting for the final knockout standings to assign ranks #1 and #2.',
+    winnerText: (winner: Team) => `${winner.name} reaches the Grand Final`,
+  },
+  {
+    key: 'spot-semifinal',
+    step: '06',
+    kicker: 'LAST-CHANCE PATH',
+    title: 'Spot Semifinal',
+    text: 'Knockout rank #3 faces rank #4. The winner moves to Semifinal 2; the loser is eliminated.',
+    lockedText: 'Waiting for the final knockout standings to assign ranks #3 and #4.',
+    winnerText: (winner: Team) => `${winner.name} reaches Semifinal 2`,
+  },
+  {
+    key: 'semifinal-2',
+    step: '07',
+    kicker: 'FINAL QUALIFIER',
+    title: 'Semifinal 2',
+    text: 'The loser of Semifinal 1 faces the winner of the Spot Semifinal for the remaining Grand Final place.',
+    lockedText: 'Waiting for the Semifinal 1 loser and Spot Semifinal winner.',
+    winnerText: (winner: Team) => `${winner.name} reaches the Grand Final`,
+  },
+  {
+    key: 'grand-final',
+    step: '08',
+    kicker: 'TITLE MATCH',
+    title: 'Grand Final',
+    text: 'The winner of Semifinal 1 faces the winner of Semifinal 2 for the championship.',
+    lockedText: 'Waiting for both Grand Finalists to be decided.',
+    winnerText: (winner: Team) => `${winner.name} wins the Grand Final`,
+  },
+] as const
+
+function NamedPlayoffStage({
+  details,
+  match,
+  t,
+  admin,
+}: {
+  details: (typeof playoffStageDetails)[number];
+  match: KnockoutMatch | null;
+  t: any;
+  admin: boolean;
+}) {
+  const decided = Boolean(match?.winnerId)
+  const tone: ChampionshipStageTone = decided ? 'complete' : match ? 'active' : 'locked'
+  const status = decided ? 'DECIDED' : match ? 'READY' : 'LOCKED'
+
+  return (
+    <ChampionshipStage
+      step={details.step}
+      kicker={details.kicker}
+      title={details.title}
+      text={details.text}
+      status={status}
+      tone={tone}
+    >
+      {match ? (
+        <div className="playoff-match-shell">
+          <KnockoutMatchCard
+            match={match}
+            t={t}
+            admin={admin}
+            matchLabel={details.title}
+            editableOverride={Boolean(t.isKnockoutMatchEditable?.(match))}
+            winnerText={details.winnerText}
+          />
+        </div>
+      ) : <LockedStage text={details.lockedText} />}
+    </ChampionshipStage>
+  )
+}
+
+function SixTeamChampionshipFlow({ t, admin }: { t: any; admin: boolean }) {
+  const qualificationEntries = (t.qualificationEntries ?? []) as QualificationEntry[]
+  const roundRobinMatches = (t.knockoutStageMatches ?? []) as RoundRobinStageMatch[]
+  const knockoutRows = (t.knockoutStandings ?? []) as Standing[]
+  const completedRoundRobin = Number.isInteger(t.completedKnockoutStageMatches)
+    ? t.completedKnockoutStageMatches
+    : roundRobinMatches.filter(roundRobinMatchIsFinished).length
+  const playoffMatches = (t.playoffMatches ?? {}) as Record<(typeof playoffStageDetails)[number]['key'], KnockoutMatch | null>
+  const qualificationComplete = qualificationEntries.length === 6
+  const roundRobinStarted = roundRobinMatches.length > 0
+  const standingsVisible = knockoutRows.length === 6 && roundRobinStarted
+  const champion = t.champion as Team | null
+
+  return (
+    <div className={`championship-flow ${admin ? 'championship-flow--admin' : 'championship-flow--public'}`}>
+      <ChampionshipStage
+        step="01"
+        kicker="GROUP STAGE"
+        title="Group A & Group B"
+        text="The existing group-stage results and ranking rules determine the three qualifiers from each group."
+        status={t.groupComplete ? 'COMPLETE' : 'IN PROGRESS'}
+        tone={t.groupComplete ? 'complete' : 'active'}
+      >
+        {t.state.groups.length
+          ? <div className="groups-grid championship-groups">{t.state.groups.map((group: Group) => <GroupCard key={group.id} group={group} t={t} />)}</div>
+          : <LockedStage text="The group draw has not been completed yet." />}
+      </ChampionshipStage>
+
+      <ChampionshipConnector />
+
+      <ChampionshipStage
+        step="02"
+        kicker="QUALIFICATION"
+        title="Qualified Teams"
+        text="The final top three from Group A and the final top three from Group B form the six-team field."
+        status={qualificationComplete ? '6 QUALIFIED' : t.groupComplete ? 'FINALIZING' : 'LOCKED'}
+        tone={qualificationComplete ? 'complete' : t.groupComplete ? 'active' : 'locked'}
+      >
+        {qualificationComplete
+          ? <QualifiedTeams entries={qualificationEntries} />
+          : <LockedStage text="All fixtures in both groups must be completed before qualification is finalized." />}
+      </ChampionshipStage>
+
+      <ChampionshipConnector />
+
+      <ChampionshipStage
+        step="03"
+        kicker="KNOCKOUT STAGE"
+        title="Six-Team Round Robin"
+        text="Every qualified team plays every other qualified team exactly once: five matches per team and 15 unique fixtures in total. Draws stand as final results."
+        status={t.knockoutStageComplete ? '15 / 15 COMPLETE' : roundRobinStarted ? `${completedRoundRobin} / 15 PLAYED` : 'LOCKED'}
+        tone={t.knockoutStageComplete ? 'complete' : roundRobinStarted ? 'active' : 'locked'}
+      >
+        {roundRobinStarted
+          ? <RoundRobinMatches t={t} admin={admin} />
+          : <LockedStage text="The 15 fixtures are generated automatically after all six qualified teams are confirmed." />}
+      </ChampionshipStage>
+
+      <ChampionshipConnector />
+
+      <ChampionshipStage
+        step="04"
+        kicker="KNOCKOUT STANDINGS"
+        title="Road to the Playoffs"
+        text="Only results from the 15-match knockout round robin count here. Group-stage positions do not carry over."
+        status={t.knockoutStageComplete ? 'FINAL' : standingsVisible ? 'LIVE' : 'LOCKED'}
+        tone={t.knockoutStageComplete ? 'complete' : standingsVisible ? 'active' : 'locked'}
+      >
+        {standingsVisible ? (
+          <>
+            <RankingTable rows={knockoutRows} ariaLabel="Knockout stage standings" className="knockout-standings-table" />
+            <div className="standings-pathway" aria-label="Knockout standings qualification paths">
+              <span><b>#1–#2</b> SEMIFINAL 1</span>
+              <span><b>#3–#4</b> SPOT SEMIFINAL</span>
+              <span className="eliminated"><b>#5–#6</b> ELIMINATED</span>
+            </div>
+          </>
+        ) : <LockedStage text="Knockout standings appear when the six-team round robin begins." />}
+      </ChampionshipStage>
+
+      {playoffStageDetails.map((details) => (
+        <div className="championship-playoff-step" key={details.key}>
+          <ChampionshipConnector />
+          <NamedPlayoffStage details={details} match={playoffMatches[details.key] ?? null} t={t} admin={admin} />
+        </div>
+      ))}
+
+      <ChampionshipConnector />
+
+      <ChampionshipStage
+        step="09"
+        kicker="TOURNAMENT CHAMPION"
+        title="Champion"
+        text="The Grand Final winner is recorded as the sole champion of this tournament."
+        status={champion ? 'CROWNED' : 'WAITING'}
+        tone={champion ? 'complete' : 'locked'}
+      >
+        {champion ? (
+          <article className="champion-spotlight">
+            <Crown />
+            <Logo team={champion} />
+            <div><small>🏆 TOURNAMENT CHAMPION</small><strong>{champion.name}</strong></div>
+            <Trophy />
+          </article>
+        ) : <LockedStage text="The champion will be crowned automatically when the Grand Final has a winner." />}
+      </ChampionshipStage>
+    </div>
+  )
+}
+
 function KnockoutPage({ t }: any) {
   return (
     <PageReveal className="page">
-      <PageHead kicker="ROAD TO GLORY" title="Knockout bracket" text="Qualifiers advance round by round. Drawn matches are decided by penalties." />
-      <KnockoutMatches t={t} admin={false} />
+      <PageHead
+        kicker="ROAD TO GLORY"
+        title={t.isSixTeamChampionship ? 'Qualification & knockout' : 'Knockout bracket'}
+        text={t.isSixTeamChampionship
+          ? 'Follow the six qualifiers through the 15-match knockout stage, playoff path, Grand Final and championship.'
+          : 'Qualifiers advance round by round. Drawn matches are decided by penalties.'}
+      />
+      {t.isSixTeamChampionship
+        ? <SixTeamChampionshipFlow t={t} admin={false} />
+        : <KnockoutMatches t={t} admin={false} />}
     </PageReveal>
   )
 }
@@ -756,6 +1134,22 @@ function CompetitionControls({ t, onDraw, onRedraw, onNext }: { t: any; onDraw: 
   }
 
   if (t.state.status === 'groups') {
+    if (t.isSixTeamChampionship) {
+      return (
+        <div className="flow-control">
+          <div className={`flow-status ${t.groupComplete ? 'ready' : ''}`}>
+            <strong>{t.groupComplete ? 'Qualification is finalizing' : `${t.pendingMatches} group match${t.pendingMatches === 1 ? '' : 'es'} remaining`}</strong>
+            <span>{t.groupComplete
+              ? 'The top three from each group and all 15 knockout-stage fixtures are created automatically.'
+              : 'Complete every Group A and Group B result to trigger automatic qualification.'}</span>
+          </div>
+          <div className="actions">
+            <button className="button ghost" type="button" disabled={!t.canRegenerateGroups} onClick={onRedraw} title={t.canRegenerateGroups ? 'Create a fresh random draw' : 'Clear every score and schedule before regenerating groups'}><RotateCcw /> Regenerate Groups</button>
+          </div>
+        </div>
+      )
+    }
+
     return (
       <div className="flow-control">
         <div className={`flow-status ${t.groupComplete ? 'ready' : ''}`}>
@@ -771,6 +1165,24 @@ function CompetitionControls({ t, onDraw, onRedraw, onNext }: { t: any; onDraw: 
   }
 
   if (t.state.status === 'knockout') {
+    if (t.isSixTeamChampionship) {
+      const roundRobinProgress = `${t.completedKnockoutStageMatches || 0} / 15 knockout-stage matches complete.`
+      const progressText = t.champion
+        ? `${t.champion.name} has won the Grand Final and is being recorded as tournament champion.`
+        : t.knockoutStageComplete
+          ? 'Playoff matches are created automatically as soon as every required participant is known.'
+          : `${roundRobinProgress} Playoff matches remain locked until the standings are final.`
+
+      return (
+        <div className="flow-control">
+          <div className={`flow-status ${t.champion ? 'ready' : ''}`}>
+            <strong>{t.state.stage}</strong>
+            <span>{progressText}</span>
+          </div>
+        </div>
+      )
+    }
+
     const isFinal = t.activeKnockoutRound === 2
     return (
       <div className="flow-control">
@@ -848,8 +1260,12 @@ function Admin({ auth, t }: any) {
     if (!window.confirm(`Start Tournament #${String(nextNumber).padStart(2, '0')}? The champion is archived; current groups and match results will be cleared.`)) return
     t.nextTournament(true)
   }
-  const totalMatches = t.state.matches.length + t.state.knockoutMatches.length
-  const playedMatches = t.completedMatches + t.completedKnockoutMatches
+  const totalMatches = t.state.matches.length
+    + t.state.knockoutMatches.length
+    + (t.isSixTeamChampionship ? (t.knockoutStageMatches?.length || 0) : 0)
+  const playedMatches = t.completedMatches
+    + t.completedKnockoutMatches
+    + (t.isSixTeamChampionship ? (t.completedKnockoutStageMatches || 0) : 0)
 
   return (
     <main className="admin-page">
@@ -902,8 +1318,10 @@ function Admin({ auth, t }: any) {
           <GroupMatches t={t} admin />
         </section>
         <section id="knockout" className="control-section">
-          <div className="section-head"><div><p className="eyebrow">KNOCKOUT OPERATIONS</p><h2>Road to the final</h2></div></div>
-          <KnockoutMatches t={t} admin />
+          <div className="section-head"><div><p className="eyebrow">KNOCKOUT OPERATIONS</p><h2>{t.isSixTeamChampionship ? 'Qualification to champion' : 'Road to the final'}</h2></div></div>
+          {t.isSixTeamChampionship
+            ? <SixTeamChampionshipFlow t={t} admin />
+            : <KnockoutMatches t={t} admin />}
         </section>
       </div>
       {modal && <AddTeamModal close={() => setModal(false)} add={t.addTeam} />}

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { isSupabaseConfigured, readRemoteState, saveRemoteState, subscribeRemote, type RemoteStateSnapshot } from '../services/leagueSupabase'
-import type { HistoryItem, TournamentState } from '../types'
+import type { HistoryItem, KnockoutMatch, TournamentState } from '../types'
 import {
   areGroupFixturesComplete,
+  areKnockoutStageFixturesComplete,
   canStartNextTournament,
   createKnockoutBracket,
   createNextKnockoutRound,
@@ -11,12 +12,17 @@ import {
   getActiveKnockoutMatches,
   getActiveKnockoutRound,
   getConfirmableChampionId,
+  getPlayoffMatch,
+  getSixQualifiers,
   hasAnyMatchSchedule,
   hasAnyMatchScore,
   initialState,
+  isSixTeamChampionship,
   isKnockoutMatchComplete,
+  knockoutStandings,
   normalizeState,
   normalizeScheduledAt,
+  reconcileTournamentProgression,
   resolveKnockoutWinner,
   setMatchSchedule,
   standings,
@@ -59,6 +65,40 @@ const knockoutStageName = (round: number | null) => {
   if (round === 4) return 'Semi-finals'
   if (round === 8) return 'Quarter-finals'
   return round ? `Round of ${round}` : 'Knockout Stage'
+}
+
+const hasEnteredKnockoutScore = (match: KnockoutMatch) => [
+  match.homeScore,
+  match.awayScore,
+  match.homePenaltyScore,
+  match.awayPenaltyScore,
+].some(value => value !== null)
+
+const hasEnteredRoundRobinScore = (match: { homeScore: number | null; awayScore: number | null }) =>
+  match.homeScore !== null || match.awayScore !== null
+
+function canEditStoredGroupMatches(state: TournamentState) {
+  if (state.status === 'groups') return true
+  return state.status === 'knockout'
+    && isSixTeamChampionship(state)
+    && !state.knockoutStageMatches.some(hasEnteredRoundRobinScore)
+    && !state.knockoutMatches.some(hasEnteredKnockoutScore)
+}
+
+function canEditStoredKnockoutMatch(state: TournamentState, match: KnockoutMatch) {
+  if (state.status !== 'knockout' || !match.homeId || !match.awayId) return false
+
+  if (!match.stage) return match.round === getActiveKnockoutRound(state.knockoutMatches)
+  if (match.stage === 'semifinal-1' || match.stage === 'spot-semifinal') {
+    return !state.knockoutMatches.some(candidate =>
+      (candidate.stage === 'semifinal-2' || candidate.stage === 'grand-final')
+      && hasEnteredKnockoutScore(candidate))
+  }
+  if (match.stage === 'semifinal-2') {
+    return !state.knockoutMatches.some(candidate =>
+      candidate.stage === 'grand-final' && hasEnteredKnockoutScore(candidate))
+  }
+  return match.stage === 'grand-final'
 }
 
 type StateUpdate = (current: TournamentState) => TournamentState | null
@@ -349,6 +389,41 @@ export function useTournament(canEdit: boolean, userId?: string) {
   }, [hydrated, canEdit, userId, commit, migrationSignal])
 
   useEffect(() => {
+    if (!hydrated || !canEdit) return
+
+    const current = stateRef.current
+    const completedTwoGroupStage = current.status === 'groups'
+      && getSixQualifiers(current.groups, current.teams, current.matches).length === 6
+    const hasSixTeamQualifiers = getSixQualifiers(current.groups, current.teams, current.matches).length === 6
+    const repairableLegacyStart = current.status === 'knockout'
+      && hasSixTeamQualifiers
+      && !current.qualifiedTeamIds.length
+      && !current.knockoutStageMatches.length
+      && current.knockoutMatches.length > 0
+      && !current.knockoutMatches.some(match => Boolean(match.stage))
+      && !current.knockoutMatches.some(hasEnteredKnockoutScore)
+      && current.winnerId === null
+    const repairableChampionship = current.status === 'knockout'
+      && (isSixTeamChampionship(current) || repairableLegacyStart)
+    if (!completedTwoGroupStage && !repairableChampionship) return
+
+    const progressed = commit(latest => reconcileTournamentProgression(latest))
+    if (progressed && (completedTwoGroupStage || repairableLegacyStart)) {
+      setMessage('Top three from Group A and Group B qualified. The 15-match Knockout Stage is ready.')
+    }
+  }, [
+    hydrated,
+    canEdit,
+    commit,
+    state.status,
+    state.groups,
+    state.matches,
+    state.qualifiedTeamIds,
+    state.knockoutStageMatches,
+    state.knockoutMatches,
+  ])
+
+  useEffect(() => {
     if (!message) return undefined
     const messageTimer = window.setTimeout(() => setMessage(''), 3500)
     return () => window.clearTimeout(messageTimer)
@@ -362,6 +437,7 @@ export function useTournament(canEdit: boolean, userId?: string) {
   )
   const pendingMatches = state.matches.length - completedMatches
   const readyToEdit = !isSupabaseConfigured || hydrated
+  const canEditGroupMatches = readyToEdit && canEditStoredGroupMatches(state)
   const groupComplete = useMemo(
     () => areGroupFixturesComplete(state.groups, state.matches),
     [state.groups, state.matches],
@@ -371,6 +447,34 @@ export function useTournament(canEdit: boolean, userId?: string) {
     && !hasAnyMatchScore(state.matches)
     && !hasAnyMatchSchedule(state.matches)
   const canStartKnockout = readyToEdit && state.status === 'groups' && groupComplete
+  const sixTeamChampionship = useMemo(() => isSixTeamChampionship(state), [state])
+  const qualificationEntries = useMemo(() => getSixQualifiers(
+    state.groups,
+    state.teams,
+    state.matches,
+  ).map(entry => ({
+    ...entry,
+    team: state.teams.find(team => team.id === entry.teamId)!,
+  })).filter(entry => Boolean(entry.team)), [state.groups, state.teams, state.matches])
+  const knockoutStageMatches = state.knockoutStageMatches
+  const completedKnockoutStageMatches = useMemo(
+    () => knockoutStageMatches.filter(match => match.homeScore !== null && match.awayScore !== null).length,
+    [knockoutStageMatches],
+  )
+  const knockoutStageComplete = useMemo(
+    () => areKnockoutStageFixturesComplete(state.qualifiedTeamIds, knockoutStageMatches),
+    [state.qualifiedTeamIds, knockoutStageMatches],
+  )
+  const knockoutTable = useMemo(
+    () => knockoutStandings(state.teams, knockoutStageMatches, state.qualifiedTeamIds),
+    [state.teams, knockoutStageMatches, state.qualifiedTeamIds],
+  )
+  const playoffMatches = useMemo(() => ({
+    'semifinal-1': getPlayoffMatch(state.knockoutMatches, 'semifinal-1'),
+    'spot-semifinal': getPlayoffMatch(state.knockoutMatches, 'spot-semifinal'),
+    'semifinal-2': getPlayoffMatch(state.knockoutMatches, 'semifinal-2'),
+    'grand-final': getPlayoffMatch(state.knockoutMatches, 'grand-final'),
+  }), [state.knockoutMatches])
   const activeKnockoutRound = useMemo(
     () => getActiveKnockoutRound(state.knockoutMatches),
     [state.knockoutMatches],
@@ -384,12 +488,14 @@ export function useTournament(canEdit: boolean, userId?: string) {
     [state.knockoutMatches],
   )
   const pendingKnockoutMatches = state.knockoutMatches.length - completedKnockoutMatches
-  const canAdvanceKnockoutRound = readyToEdit && state.status === 'knockout'
+  const canAdvanceKnockoutRound = !sixTeamChampionship && readyToEdit && state.status === 'knockout'
     && activeKnockoutMatches.length > 0
     && activeKnockoutMatches.every(isKnockoutMatchComplete)
   const finalMatch = useMemo(
-    () => state.knockoutMatches.find((match) => match.round === 2) ?? null,
-    [state.knockoutMatches],
+    () => playoffMatches['grand-final']
+      ?? state.knockoutMatches.find((match) => !match.stage && match.round === 2)
+      ?? null,
+    [playoffMatches, state.knockoutMatches],
   )
   const champion = useMemo(() => {
     const championId = state.winnerId
@@ -400,6 +506,12 @@ export function useTournament(canEdit: boolean, userId?: string) {
     () => readyToEdit && canStartNextTournament(state),
     [readyToEdit, state],
   )
+  const canEditKnockoutStageMatches = readyToEdit
+    && state.status === 'knockout'
+    && sixTeamChampionship
+    && !state.knockoutMatches.some(hasEnteredKnockoutScore)
+  const isKnockoutMatchEditable = (match: KnockoutMatch) =>
+    readyToEdit && canEditStoredKnockoutMatch(state, match)
 
   const addTeam = (name: string, imageUrl: string) => {
     const cleanName = name.trim()
@@ -494,6 +606,10 @@ export function useTournament(canEdit: boolean, userId?: string) {
         ...latest,
         groups,
         matches: generateMatches(groups),
+        qualifiedTeamIds: [],
+        knockoutStageMatches: [],
+        knockoutMatches: [],
+        winnerId: null,
         status: 'groups',
         stage: 'Group Stage',
       }
@@ -529,13 +645,13 @@ export function useTournament(canEdit: boolean, userId?: string) {
       setMessage('Choose a valid match date and time.')
       return false
     }
-    if (stateRef.current.status !== 'groups') {
-      setMessage('Group match times can only be changed during the group stage.')
+    if (!canEditStoredGroupMatches(stateRef.current)) {
+      setMessage('Group match times lock after the first Knockout Stage result is entered.')
       return false
     }
 
     const updated = commit((current) => {
-      if (current.status !== 'groups') return null
+      if (!canEditStoredGroupMatches(current)) return null
       const matches = setMatchSchedule(current.matches, id, scheduledAt)
       return matches ? { ...current, matches } : null
     })
@@ -549,10 +665,21 @@ export function useTournament(canEdit: boolean, userId?: string) {
       return false
     }
     return commit((current) => {
-      if (current.status !== 'groups' || !current.matches.some((match) => match.id === id)) return null
-      return {
-        ...current,
-        matches: current.matches.map((match) => match.id === id
+      if (!canEditStoredGroupMatches(current) || !current.matches.some((match) => match.id === id)) return null
+      const editableState: TournamentState = current.status === 'groups'
+        ? current
+        : {
+            ...current,
+            status: 'groups',
+            stage: 'Group Stage',
+            qualifiedTeamIds: [],
+            knockoutStageMatches: [],
+            knockoutMatches: [],
+            winnerId: null,
+          }
+      const scored = {
+        ...editableState,
+        matches: editableState.matches.map((match) => match.id === id
           ? {
               ...match,
               homeScore,
@@ -561,6 +688,7 @@ export function useTournament(canEdit: boolean, userId?: string) {
             }
           : match),
       }
+      return reconcileTournamentProgression(scored)
     })
   }
 
@@ -574,9 +702,13 @@ export function useTournament(canEdit: boolean, userId?: string) {
       setMessage('Complete every group match before starting the knockout stage.')
       return false
     }
+    const usesSixTeamFormat = getSixQualifiers(current.groups, current.teams, current.matches).length === 6
 
     const started = commit((latest) => {
       if (latest.status !== 'groups' || !areGroupFixturesComplete(latest.groups, latest.matches)) return null
+      const progressed = reconcileTournamentProgression(latest)
+      if (progressed !== latest) return progressed
+
       const knockoutMatches = createKnockoutBracket(latest.groups, latest.teams, latest.matches)
       if (!knockoutMatches.length) return null
       return {
@@ -586,8 +718,45 @@ export function useTournament(canEdit: boolean, userId?: string) {
         stage: knockoutStageName(getActiveKnockoutRound(knockoutMatches)),
       }
     })
-    if (started) setMessage('Knockout bracket generated.')
+    if (started) setMessage(usesSixTeamFormat
+      ? 'Six teams qualified. All 15 Knockout Stage fixtures were generated.'
+      : 'Knockout bracket generated.')
     return started
+  }
+
+  const knockoutStageScore = (id: string, homeScore: number | null, awayScore: number | null) => {
+    if (!isNullableScore(homeScore) || !isNullableScore(awayScore)) {
+      setMessage('Scores must be whole numbers from 0 to 99.')
+      return false
+    }
+
+    const updated = commit((current) => {
+      if (current.status !== 'knockout' || !isSixTeamChampionship(current)) return null
+      if (current.knockoutMatches.some(hasEnteredKnockoutScore)) return null
+      if (!current.knockoutStageMatches.some(match => match.id === id)) return null
+
+      const knockoutStageMatches = current.knockoutStageMatches.map(match => match.id === id
+        ? {
+            ...match,
+            homeScore,
+            awayScore,
+            playedAt: homeScore !== null && awayScore !== null ? new Date().toISOString() : undefined,
+          }
+        : match)
+      // Unplayed playoff fixtures are derived from the standings. Rebuild them
+      // when an administrator corrects a round-robin result before playoff play.
+      return reconcileTournamentProgression({
+        ...current,
+        knockoutStageMatches,
+        knockoutMatches: [],
+        stage: 'Knockout Stage',
+      })
+    })
+
+    if (!updated && stateRef.current.knockoutMatches.some(hasEnteredKnockoutScore)) {
+      setMessage('Knockout Stage results lock after a playoff score is entered.')
+    }
+    return updated
   }
 
   const knockoutScore = (
@@ -604,16 +773,26 @@ export function useTournament(canEdit: boolean, userId?: string) {
 
     const updated = commit((current) => {
       if (current.status !== 'knockout') return null
-      const activeRound = getActiveKnockoutRound(current.knockoutMatches)
-      const target = current.knockoutMatches.find((match) => match.id === id && match.round === activeRound)
+      const storedTarget = current.knockoutMatches.find(match => match.id === id)
+      if (!storedTarget || !canEditStoredKnockoutMatch(current, storedTarget)) return null
+
+      let retainedMatches = current.knockoutMatches
+      if (storedTarget.stage === 'semifinal-1' || storedTarget.stage === 'spot-semifinal') {
+        retainedMatches = retainedMatches.filter(match =>
+          match.stage !== 'semifinal-2' && match.stage !== 'grand-final')
+      } else if (storedTarget.stage === 'semifinal-2') {
+        retainedMatches = retainedMatches.filter(match => match.stage !== 'grand-final')
+      }
+      const target = retainedMatches.find(match => match.id === id)
       if (!target || !target.homeId || !target.awayId) return null
 
+      const needsPenalties = homeScore !== null && awayScore !== null && homeScore === awayScore
       const scoredMatch = {
         ...target,
         homeScore,
         awayScore,
-        homePenaltyScore,
-        awayPenaltyScore,
+        homePenaltyScore: needsPenalties ? homePenaltyScore : null,
+        awayPenaltyScore: needsPenalties ? awayPenaltyScore : null,
         winnerId: null,
         playedAt: undefined,
       }
@@ -624,13 +803,14 @@ export function useTournament(canEdit: boolean, userId?: string) {
         playedAt: winnerId ? new Date().toISOString() : undefined,
       }
 
-      return {
+      const scoredState = {
         ...current,
-        knockoutMatches: current.knockoutMatches.map((match) => match.id === id ? nextMatch : match),
+        knockoutMatches: retainedMatches.map((match) => match.id === id ? nextMatch : match),
       }
+      return target.stage ? reconcileTournamentProgression(scoredState) : scoredState
     })
 
-    if (!updated && stateRef.current.status !== 'knockout') {
+    if (!updated) {
       setMessage('Only active knockout matches can be scored.')
     }
     return updated
@@ -640,6 +820,10 @@ export function useTournament(canEdit: boolean, userId?: string) {
     const current = stateRef.current
     if (current.status !== 'knockout') {
       setMessage('There is no active knockout round to advance.')
+      return false
+    }
+    if (isSixTeamChampionship(current)) {
+      setMessage('This championship advances automatically as each required result is completed.')
       return false
     }
 
@@ -739,6 +923,8 @@ export function useTournament(canEdit: boolean, userId?: string) {
         stage: 'Team Registration',
         groups: [],
         matches: [],
+        qualifiedTeamIds: [],
+        knockoutStageMatches: [],
         knockoutMatches: [],
         winnerId: null,
       }
@@ -762,8 +948,18 @@ export function useTournament(canEdit: boolean, userId?: string) {
     completedMatches,
     pendingMatches,
     groupComplete,
+    canEditGroupMatches,
     canRegenerateGroups,
     canStartKnockout,
+    isSixTeamChampionship: sixTeamChampionship,
+    qualificationEntries,
+    knockoutStageMatches,
+    knockoutStandings: knockoutTable,
+    completedKnockoutStageMatches,
+    knockoutStageComplete,
+    playoffMatches,
+    canEditKnockoutStageMatches,
+    isKnockoutMatchEditable,
     activeKnockoutRound,
     activeKnockoutMatches,
     completedKnockoutMatches,
@@ -784,6 +980,7 @@ export function useTournament(canEdit: boolean, userId?: string) {
     scheduleMatch,
     score,
     startKnockout,
+    knockoutStageScore,
     knockoutScore,
     advanceKnockoutRound,
     complete,
